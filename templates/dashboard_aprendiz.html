@@ -1,0 +1,61 @@
+{% extends 'base_aprendiz.html' %}
+{% set active_page = 'dashboard' %}
+
+{% block content %}
+<div style="margin-bottom: 30px;">
+    <h2>DASHBOARD (APRENDIZ)</h2>
+    <p style="color: var(--text-muted);">Bienvenido a tu panel de control de asistencia.</p>
+</div>
+
+<div class="dashboard-grid" style="margin-bottom: 25px;">
+    <div class="card" style="grid-column: span 2; display: flex; justify-content: space-between; align-items: center;">
+        <div>
+            <h3>Bienvenido/a, {{ session.get('nombre', 'Aprendiz') }} <span style="font-weight: 400; color: var(--text-muted);">&mdash; {{ session.get('rol', 'aprendiz') | capitalize }}</span></h3>
+            <span class="badge badge-presente" style="margin-top: 8px;">ETAPA LECTIVA</span>
+        </div>
+        <div style="text-align: right;">
+            <button style="background: var(--primary); color: var(--bg-main); border: none; padding: 12px 20px; border-radius: 8px; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                <i class="ph ph-fingerprint"></i> Registrar Entrada / Salida
+            </button>
+            <span style="font-size: 0.8rem; color: var(--text-muted); display: block; margin-top: 6px;"><i class="ph ph-crosshair"></i> Geolocalización activa</span>
+        </div>
+    </div>
+
+    <div class="card" style="display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;">
+        <h4>Mi Resumen de Asistencia</h4>
+        <p style="color: var(--text-muted); font-size: 0.8rem; margin-bottom: 15px;">(Trimestre Actual)</p>
+        <div style="width: 130px; height: 130px; border-radius: 50%; background: conic-gradient(var(--primary) 92%, var(--border-color) 0); display: flex; align-items: center; justify-content: center;">
+            <div style="width: 105px; height: 105px; background: var(--bg-card); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                <span style="font-size: 1.6rem; font-weight: bold;">92%</span>
+            </div>
+        </div>
+        <div style="display: flex; gap: 15px; margin-top: 15px; font-size: 0.8rem; color: var(--text-muted);">
+            <span><i class="ph ph-circle" style="color: var(--primary);"></i> Presente</span>
+            <span><i class="ph ph-circle" style="color: var(--border-color);"></i> Falla</span>
+        </div>
+    </div>
+</div>
+
+<div class="dashboard-grid">
+    <div class="card">
+        <span style="color: var(--text-muted); font-size: 0.85rem;">Dato Rápido</span>
+        <h4 style="margin-top: 5px;">Ficha Activa</h4>
+        <p style="color: var(--primary); font-size: 1.1rem; font-weight: bold; margin-top: 10px;">Ficha 2557908</p>
+    </div>
+    <div class="card">
+        <span style="color: var(--text-muted); font-size: 0.85rem;">Dato Rápido</span>
+        <h4 style="margin-top: 5px;">Instructor Principal</h4>
+        <p style="color: var(--text-white); font-size: 1.1rem; font-weight: bold; margin-top: 10px;">Juan Pérez</p>
+    </div>
+    <div class="card">
+        <span style="color: var(--text-muted); font-size: 0.85rem;">Dato Rápido</span>
+        <h4 style="margin-top: 5px;">Promedio Total</h4>
+        <p style="color: var(--info); font-size: 1.1rem; font-weight: bold; margin-top: 10px;">92% Global</p>
+    </div>
+    <div class="card">
+        <span style="color: var(--text-muted); font-size: 0.85rem;">Dato Rápido</span>
+        <h4 style="margin-top: 5px;">Novedades Pendientes</h4>
+        <p style="color: var(--warning); font-size: 1.1rem; font-weight: bold; margin-top: 10px;">1 Pendiente</p>
+    </div>
+</div>
+{% endblock %}

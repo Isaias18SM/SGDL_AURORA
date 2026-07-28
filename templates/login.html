@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SENA Connect - Iniciar Sesión</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/login.css') }}">
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+</head>
+<body>
+
+<div class="login-wrapper">
+
+    <!-- Panel izquierdo -->
+    <div class="login-left">
+        <div class="login-brand">
+            <img src="{{ url_for('static', filename='img/logo.png') }}" alt="SENA Connect" class="login-brand-logo">
+        </div>
+        <p class="login-tagline">
+            Sistema de Gestión y Digitalización de Listas — SGDL AURORA
+        </p>
+        <div class="login-features">
+            <div class="login-feature-item">
+                <i class="ph ph-identification-card"></i>
+                <span>Acceso unificado para todos los roles</span>
+            </div>
+            <div class="login-feature-item">
+                <i class="ph ph-qr-code"></i>
+                <span>Registro de asistencia por QR</span>
+            </div>
+            <div class="login-feature-item">
+                <i class="ph ph-chart-bar"></i>
+                <span>Dashboard de métricas en tiempo real</span>
+            </div>
+            <div class="login-feature-item">
+                <i class="ph ph-bell"></i>
+                <span>Alertas automáticas de inasistencia</span>
+            </div>
+            <div class="login-feature-item">
+                <i class="ph ph-shield-check"></i>
+                <span>Acceso seguro por rol institucional</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Panel derecho -->
+    <div class="login-right">
+        <div>
+            <h2 class="login-title">Bienvenido</h2>
+            <p class="login-subtitle">Ingresa con tu correo institucional SENA </p>
+        </div>
+
+    
+
+        {% if error %}
+        <div class="login-error">
+            <i class="ph ph-warning-circle"></i> {{ error }}
+        </div>
+        {% endif %}
+
+        <form method="POST" action="{{ url_for('login') }}" style="display:flex; flex-direction:column; gap:16px;">
+
+            <div class="form-group">
+                <label>Correo institucional SENA</label>
+                <input type="email" name="correo" id="correo_input"
+                       placeholder="usuario@sena.edu.co"
+                       required autocomplete="email">
+            </div>
+
+            <!-- Indicador de rol detectado (solo visual, la BD lo confirma) -->
+            <div class="rol-detectado" id="rol_hint">
+                <i class="ph ph-info" style="color:var(--primary);"></i>
+                <span>Iniciando sesión como <span class="rol-badge" id="rol_badge_text"></span></span>
+            </div>
+
+            <div class="form-group">
+                <label>Contraseña</label>
+                <input type="password" name="contrasena" placeholder="••••••••"
+                       required autocomplete="current-password">
+            </div>
+
+            <button type="submit" class="login-btn">
+                <i class="ph ph-sign-in"></i> Ingresar al Sistema
+            </button>
+
+            <a href="{{ url_for('recuperar_contrasena') }}" style="text-align:center; color: var(--primary); text-decoration: none; font-size: 0.88rem; font-weight: 600;">
+                ¿Olvidaste tu contraseña?
+            </a>
+        </form>
+
+        <p class="login-footer">
+            SGDL AURORA &mdash; Servicio Nacional de Aprendizaje &copy; 2026
+        </p>
+    </div>
+</div>
+
+<script>
+    /*
+     * Muestra un indicador visual de rol según el dominio del correo.
+     * Esto es solo orientativo — la validación real ocurre en la BD.
+     * El sistema detecta el rol consultando las tres tablas.
+     */
+    const correoInput = document.getElementById('correo_input');
+    const rolHint     = document.getElementById('rol_hint');
+    const rolBadge    = document.getElementById('rol_badge_text');
+
+    // Íconos por rol
+    const iconos = {
+        aprendiz:    'ph ph-student',
+        instructor:  'ph ph-chalkboard-teacher',
+        coordinador: 'ph ph-user-gear'
+    };
+
+    correoInput.addEventListener('input', () => {
+        const val = correoInput.value.trim().toLowerCase();
+
+        /*
+         * Puedes personalizar esta lógica si los correos siguen un patrón.
+         * Por defecto mostramos "el sistema lo detectará" para cualquier
+         * correo válido, ya que la BD es la fuente de verdad.
+         */
+        if (val.includes('@') && val.length > 5) {
+            rolHint.classList.add('visible');
+            rolBadge.innerHTML = '<i class="ph ph-magnifying-glass"></i> detectando...';
+        } else {
+            rolHint.classList.remove('visible');
+        }
+    });
+</script>
+
+</body>
+</html>

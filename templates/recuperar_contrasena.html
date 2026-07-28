@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SENA Connect - Recuperar Contraseña</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/login.css') }}">
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+</head>
+<body>
+
+<div class="login-wrapper">
+
+    <!-- Panel izquierdo -->
+    <div class="login-left">
+        <div class="login-brand">
+            <img src="{{ url_for('static', filename='img/logo.png') }}" alt="SENA Connect" class="login-brand-logo">
+        </div>
+        <p class="login-tagline">
+            Sistema de Gestión y Digitalización de Listas — SGDL AURORA
+        </p>
+        <div class="login-features">
+            <div class="login-feature-item">
+                <i class="ph ph-shield-check"></i>
+                <span>Recuperación segura de contraseña</span>
+            </div>
+            <div class="login-feature-item">
+                <i class="ph ph-envelope-simple"></i>
+                <span>Enlace enviado a tu correo institucional</span>
+            </div>
+            <div class="login-feature-item">
+                <i class="ph ph-clock-countdown"></i>
+                <span>El enlace expira por seguridad</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Panel derecho -->
+    <div class="login-right">
+        <div>
+            <h2 class="login-title">Recuperar Contraseña</h2>
+            <p class="login-subtitle">Ingresa tu correo institucional SENA y te enviaremos un enlace para restablecer tu contraseña.</p>
+        </div>
+
+        {% if error %}
+        <div class="login-error">
+            <i class="ph ph-warning-circle"></i> {{ error }}
+        </div>
+        {% endif %}
+
+        {% if mensaje %}
+        <div class="login-success">
+            <i class="ph ph-check-circle"></i> {{ mensaje }}
+        </div>
+        {% endif %}
+
+        <form method="POST" action="{{ url_for('recuperar_contrasena') }}" style="display:flex; flex-direction:column; gap:16px;">
+
+            <div class="form-group">
+                <label>Correo institucional SENA</label>
+                <input type="email" name="correo"
+                       placeholder="usuario@sena.edu.co"
+                       required autocomplete="email">
+            </div>
+
+            <button type="submit" class="login-btn">
+                <i class="ph ph-paper-plane-tilt"></i> Enviar Enlace de Recuperación
+            </button>
+        </form>
+
+        <p class="login-footer">
+            <a href="{{ url_for('login') }}" style="color: var(--primary); text-decoration: none; font-weight: 600;">
+                <i class="ph ph-arrow-left"></i> Volver a Iniciar Sesión
+            </a>
+        </p>
+    </div>
+</div>
+
+</body>
+</html>
