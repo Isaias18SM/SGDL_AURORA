@@ -1,0 +1,20 @@
+{% extends 'base.html' %}
+{% set active_page = 'novedades' %}
+
+{% block content %}
+<div style="margin-bottom: 30px;">
+    <h2>NOVEDADES GENERALES</h2>
+    <p style="color: var(--text-muted);">Alertas y solicitudes reportadas por los instructores en todas las fichas.</p>
+</div>
+
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h3>Buzón General</h3>
+        <span class="badge badge-presente" style="border-radius: 6px;">0 Pendientes</span>
+    </div>
+    <p style="color: var(--text-muted); font-size: 0.9rem;">
+        Aún no hay novedades reportadas por los instructores. Cuando un instructor registre una
+        excusa o una alerta de inasistencia en su ficha, aparecerá aquí para tu revisión.
+    </p>
+</div>
+{% endblock %}

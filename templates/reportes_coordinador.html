@@ -1,0 +1,47 @@
+{% extends 'base.html' %}
+{% set active_page = 'reportes' %}
+
+{% block content %}
+<div style="margin-bottom: 30px;">
+    <h2>REPORTES GENERALES</h2>
+    <p style="color: var(--text-muted);">Panorama de fichas, instructores y ocupación a nivel del programa.</p>
+</div>
+
+<div class="dashboard-grid">
+    <div class="card">
+        <h3>Fichas por Instructor</h3>
+        <div style="margin-top:15px; display:flex; flex-direction:column; gap:10px;">
+            {% for ins in instructores %}
+            <div class="ficha-mini-row">
+                <div>
+                    <strong>{{ ins.nombre }}</strong>
+                    <p>{{ ins.especialidad }}</p>
+                </div>
+                <span class="badge badge-presente">
+                    {{ fichas | selectattr('instructor_id', 'equalto', ins.id) | list | length }} ficha(s)
+                </span>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div class="card">
+        <h3>Estado de las Fichas</h3>
+        <div style="margin-top:15px; display:flex; flex-direction:column; gap:10px;">
+            {% for f in fichas %}
+            <div class="ficha-mini-row">
+                <div>
+                    <strong>Ficha {{ f.codigo }}</strong>
+                    <p>{{ f.programa }} &middot; {{ f.jornada }}</p>
+                </div>
+                {% if f.instructor_id %}
+                <span class="badge badge-presente">Asignada</span>
+                {% else %}
+                <span class="badge badge-falla">Sin instructor</span>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}

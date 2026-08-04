@@ -1,0 +1,58 @@
+{% extends 'base.html' %}
+{% set active_page = 'lista' %}
+
+{% block content %}
+<div style="margin-bottom: 20px; display:flex; justify-content:space-between; align-items:flex-end; flex-wrap:wrap; gap:15px;">
+    <div>
+        <h2>LISTA DE ASISTENCIA — TODAS LAS FICHAS</h2>
+        <p style="color: var(--text-muted);">Vista consolidada de asistencia de todas las fichas del programa.</p>
+    </div>
+    <form method="GET">
+        <select name="ficha" class="form-input" onchange="this.form.submit()">
+            <option value="">Todas las fichas</option>
+            {% for f in fichas %}
+            <option value="{{ f.codigo }}" {% if ficha_filtro == f.codigo %}selected{% endif %}>Ficha {{ f.codigo }}</option>
+            {% endfor %}
+        </select>
+    </form>
+</div>
+
+<div class="card">
+    <table class="custom-table">
+        <thead>
+            <tr>
+                <th>Aprendiz - Nombre</th>
+                <th>Documento</th>
+                <th>Ficha</th>
+                <th>Estado</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for aprendiz in aprendices %}
+            <tr>
+                <td>{{ aprendiz.nombre }}</td>
+                <td>{{ aprendiz.documento }}</td>
+                <td>{{ aprendiz.ficha }}</td>
+                <td>
+                    {% if aprendiz.estado == 'Presente' %}
+                        <span class="badge badge-presente">Presente</span>
+                    {% elif aprendiz.estado == 'Falla' %}
+                        <span class="badge badge-falla">Falla</span>
+                    {% elif aprendiz.estado == 'Excusa' %}
+                        <span class="badge badge-excusa">Excusa</span>
+                    {% else %}
+                        <span class="badge badge-retardo">{{ aprendiz.estado }}</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="4" style="text-align: center; color: var(--text-muted);">
+                    No hay registros de asistencia para mostrar.
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

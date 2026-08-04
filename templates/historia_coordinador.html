@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+{% set active_page = 'historial' %}
+
+{% block content %}
+<div style="margin-bottom: 30px;">
+    <h2>HISTORIAL GENERAL</h2>
+    <p style="color: var(--text-muted);">Estado y responsables de todas las fichas del programa.</p>
+</div>
+
+<div class="card">
+    <table class="custom-table">
+        <thead>
+            <tr>
+                <th>Ficha / Programa</th>
+                <th>Jornada</th>
+                <th>Instructor</th>
+                <th>Estado</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for f in fichas %}
+            <tr>
+                <td><strong>{{ f.codigo }}</strong> - {{ f.programa }}</td>
+                <td>{{ f.jornada }}</td>
+                <td>
+                    {% set ins = instructores | selectattr('id', 'equalto', f.instructor_id) | list %}
+                    {{ ins[0].nombre if ins else 'Sin asignar' }}
+                </td>
+                <td>
+                    {% if f.instructor_id %}
+                    <span class="badge badge-presente" style="padding: 4px 8px; font-size: 0.75rem;">Activa</span>
+                    {% else %}
+                    <span class="badge badge-falla" style="padding: 4px 8px; font-size: 0.75rem;">Sin instructor</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="4" style="text-align: center; color: var(--text-muted);">No hay fichas registradas.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
