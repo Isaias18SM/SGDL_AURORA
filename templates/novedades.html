@@ -1,0 +1,60 @@
+{% extends 'base.html' %}
+{% set active_page = 'novedades' %}
+
+{% block content %}
+<div style="margin-bottom: 30px;">
+    <h2>NOVEDADES Y ALERTAS</h2>
+    <p style="color: var(--text-muted);">Revisa las solicitudes de justificación y alertas críticas del sistema.</p>
+</div>
+
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h3>Buzón de Notificaciones</h3>
+        <span class="badge badge-falla" style="border-radius: 6px;">3 Pendientes</span>
+    </div>
+
+    <table class="custom-table">
+        <thead>
+            <tr>
+                <th>Aprendiz</th>
+                <th>Tipo</th>
+                <th>Detalles de la Novedad</th>
+                <th>Tiempo</th>
+                <th style="text-align: right;">Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>Ana Gomez</strong></td>
+                <td><span class="badge badge-excusa">Excusa Médica</span></td>
+                <td style="color: var(--text-muted);">Soportes de cita médica EPS cargados para la sesión de hoy.</td>
+                <td>Hace 10 min</td>
+                <td style="text-align: right;">
+                    <button style="background: rgba(22, 163, 74, 0.1); border: 1px solid var(--primary); color: var(--primary); padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 0.85rem; margin-right: 5px;">Aprobar</button>
+                    <button style="background: transparent; border: 1px solid var(--border-color); color: var(--text-white); padding: 6px; border-radius: 4px; cursor: pointer;"><i class="ph ph-dots-three-vertical"></i></button>
+                </td>
+            </tr>
+            <tr style="background-color: rgba(6, 95, 70, 0.04);">
+                <td><strong>Luis Rodriguez</strong></td>
+                <td><span class="badge badge-falla">Alerta Sistema</span></td>
+                <td style="color: var(--danger); font-weight: 500;">Falla excesiva detectada. Registra un 15% de inasistencia.</td>
+                <td>Hace 1 hora</td>
+                <td style="text-align: right;">
+                    <button style="background: var(--danger); border: none; color: var(--bg-main); padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 0.85rem; font-weight: bold; margin-right: 5px;">Citar Comité</button>
+                    <button style="background: transparent; border: 1px solid var(--border-color); color: var(--text-white); padding: 6px; border-radius: 4px; cursor: pointer;"><i class="ph ph-dots-three-vertical"></i></button>
+                </td>
+            </tr>
+            <tr>
+                <td><strong>Carlos Mendoza</strong></td>
+                <td><span class="badge badge-retardo">Retardo</span></td>
+                <td style="color: var(--text-muted);">Ingreso tardío reportado por la app del aprendiz (Geolocalizado).</td>
+                <td>Hace 2 horas</td>
+                <td style="text-align: right;">
+                    <button style="background: transparent; border: 1px solid var(--border-color); color: var(--text-white); padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 0.85rem; margin-right: 5px;">Revisar</button>
+                    <button style="background: transparent; border: 1px solid var(--border-color); color: var(--text-white); padding: 6px; border-radius: 4px; cursor: pointer;"><i class="ph ph-dots-three-vertical"></i></button>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+{% endblock %}

@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+{% set active_page = 'dashboard' %}
+
+{% block content %}
+<div class="welcome-screen">
+    <div class="welcome-decor welcome-decor-1"></div>
+    <div class="welcome-decor welcome-decor-2"></div>
+    <div class="welcome-decor welcome-decor-3"></div>
+
+    <div class="welcome-content">
+        <div class="welcome-icon">
+            <i class="ph ph-chalkboard-teacher"></i>
+        </div>
+
+        <p class="welcome-eyebrow">{{ fecha_hoy }}</p>
+
+        <h1 class="welcome-title">
+            {{ saludo }}, <span>{{ session.get('nombre', 'Instructor') }}</span>
+        </h1>
+
+        <p class="welcome-subtitle">
+            Bienvenido de nuevo a SENA Connect. Este es tu espacio para gestionar
+            fichas, registrar asistencia y mantenerte al día con tus aprendices.
+        </p>
+
+        <div class="welcome-actions">
+            <a href="{{ url_for('fichas') }}" class="welcome-action">
+                <i class="ph ph-folder"></i>
+                <span>Mis Fichas</span>
+            </a>
+            <a href="{{ url_for('lista_asistencia') }}" class="welcome-action">
+                <i class="ph ph-clipboard-text"></i>
+                <span>Tomar Asistencia</span>
+            </a>
+            <a href="{{ url_for('novedades') }}" class="welcome-action">
+                <i class="ph ph-bell"></i>
+                <span>Novedades</span>
+            </a>
+            <a href="{{ url_for('historial') }}" class="welcome-action">
+                <i class="ph ph-clock-history"></i>
+                <span>Historial</span>
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

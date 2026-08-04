@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+{% set active_page = 'config' %}
+
+{% block content %}
+<div style="margin-bottom: 30px;">
+    <h2>CONFIGURACIÓN</h2>
+    <p style="color: var(--text-muted);">Gestiona tu perfil y preferencias del sistema.</p>
+</div>
+
+<div class="card">
+    <h3>Configuración del Perfil</h3>
+    <form style="margin-top:15px; display:flex; flex-direction:column; gap:15px;">
+        <div>
+            <label style="display:block; font-size:0.85rem; color:var(--text-muted); margin-bottom:5px;">Nombre Completo</label>
+            <input type="text" value="{{ user.nombre | default('Juan Perez') }}" style="width:100%; background:var(--bg-main); border:1px solid var(--border-color); padding:10px; border-radius:6px; color:var(--text-white);">
+        </div>
+        <div>
+            <label style="display:block; font-size:0.85rem; color:var(--text-muted); margin-bottom:5px;">Correo Electrónico</label>
+            <input type="email" value="{{ user.email | default('j.perez@sena.edu.co') }}" style="width:100%; background:var(--bg-main); border:1px solid var(--border-color); padding:10px; border-radius:6px; color:var(--text-white);">
+        </div>
+        <button type="button" style="background:var(--primary); border:none; padding:10px; border-radius:6px; font-weight:bold; cursor:pointer; color:var(--bg-main);">Guardar Cambios</button>
+    </form>
+</div>
+{% endblock %}

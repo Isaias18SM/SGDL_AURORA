@@ -1,0 +1,60 @@
+{% extends 'base_aprendiz.html' %}
+{% set active_page = 'novedades' %}
+
+{% block content %}
+<div style="margin-bottom: 30px;">
+    <h2>JUSTIFICAR NOVEDADES Y EXCUSAS</h2>
+    <p style="color: var(--text-muted);">Gestiona los soportes de tus fallas o revisa las circulares publicadas.</p>
+</div>
+
+<div class="dashboard-grid">
+    <div class="card">
+        <h3>Radicar Nueva Excusa</h3>
+        <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 20px;">Sube tus comprobantes oficiales (EPS, calamidades) para aprobación del instructor.</p>
+
+        <div style="display: flex; flex-direction: column; gap: 15px;">
+            <div>
+                <label style="display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 5px;">Fecha de la Inasistencia</label>
+                <input type="date" style="width: 100%; background: var(--bg-main); border: 1px solid var(--border-color); padding: 10px; border-radius: 6px; color: var(--text-white);">
+            </div>
+            <div>
+                <label style="display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 5px;">Motivo / Asunto</label>
+                <input type="text" placeholder="Ej: Cita médica especialista SURA" style="width: 100%; background: var(--bg-main); border: 1px solid var(--border-color); padding: 10px; border-radius: 6px; color: var(--text-white);">
+            </div>
+            <div>
+                <label style="display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 5px;">Adjuntar Documento (PDF / Imagen)</label>
+                <div style="border: 2px dashed var(--border-color); padding: 20px; text-align: center; border-radius: 8px; cursor: pointer; color: var(--text-muted);">
+                    <i class="ph ph-cloud-arrow-up" style="font-size: 2rem; color: var(--primary);"></i>
+                    <p style="font-size: 0.85rem; margin-top: 5px;">Arrastra tu archivo aquí o haz clic para buscar</p>
+                </div>
+            </div>
+            <button type="button" style="background: var(--primary); border: none; padding: 12px; border-radius: 6px; font-weight: bold; cursor: pointer; color: var(--bg-main);">Enviar Justificación</button>
+        </div>
+    </div>
+
+    <div class="card">
+        <h3>Anuncios de Instructores</h3>
+        <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 15px;">Mensajes institucionales importantes publicados recientemente.</p>
+
+        <div style="display: flex; flex-direction: column; gap: 12px;">
+            <div style="background: var(--bg-main); padding: 15px; border-radius: 8px; border-left: 4px solid var(--info);">
+                <div style="display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--text-muted);">
+                    <span>Instructor Juan Pérez</span>
+                    <span>12/03/2026</span>
+                </div>
+                <h5 style="margin-top: 5px; color: var(--text-white);">Anuncio de Horario del Proyecto</h5>
+                <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 4px;">Recuerden que mañana la revisión de bitácoras inicia a las 7:00 AM en el ambiente 402.</p>
+            </div>
+
+            <div style="background: var(--bg-main); padding: 15px; border-radius: 8px; border-left: 4px solid var(--warning);">
+                <div style="display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--text-muted);">
+                    <span>Coordinación Académica</span>
+                    <span>10/03/2026</span>
+                </div>
+                <h5 style="margin-top: 5px; color: var(--text-white);">Mensaje de formación transversal</h5>
+                <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 4px;">El enlace para cargar la planeación de cultura física ya se encuentra disponible en Territorium.</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

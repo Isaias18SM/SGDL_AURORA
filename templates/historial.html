@@ -1,0 +1,59 @@
+{% extends 'base.html' %}
+{% set active_page = 'historial' %}
+
+{% block content %}
+<div style="margin-bottom: 30px; display: flex; justify-content: space-between; align-items: center;">
+    <div>
+        <h2>HISTORIAL DE ASISTENCIAS</h2>
+        <p style="color: var(--text-muted);">Consulta las bitácoras y estados de llamados a lista anteriores.</p>
+    </div>
+    <button style="background: transparent; border: 1px solid var(--border-color); color: var(--text-white); padding: 10px 15px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+        <i class="ph ph-funnel"></i> Filtrar por Fecha
+    </button>
+</div>
+
+<div class="card">
+    <table class="custom-table">
+        <thead>
+            <tr>
+                <th>Fecha</th>
+                <th>Ficha / Programa</th>
+                <th>Asistieron</th>
+                <th>Fallas</th>
+                <th>Excusas</th>
+                <th>Estado Bitácora</th>
+                <th style="text-align: right;">Reporte</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>09/05/2026</strong></td>
+                <td>2557908 - ADSO</td>
+                <td style="color: var(--primary); font-weight: 600;">32</td>
+                <td style="color: var(--danger);">2</td>
+                <td style="color: var(--warning);">1</td>
+                <td><span class="badge badge-presente" style="padding: 4px 8px; font-size: 0.75rem;">Guardado</span></td>
+                <td style="text-align: right;"><a href="#" style="color: var(--info); text-decoration: none;"><i class="ph ph-download-simple" style="font-size: 1.2rem;"></i></a></td>
+            </tr>
+            <tr>
+                <td><strong>08/05/2026</strong></td>
+                <td>2557908 - ADSO</td>
+                <td style="color: var(--primary); font-weight: 600;">30</td>
+                <td style="color: var(--danger);">5</td>
+                <td style="color: var(--warning);">0</td>
+                <td><span class="badge badge-presente" style="padding: 4px 8px; font-size: 0.75rem;">Guardado</span></td>
+                <td style="text-align: right;"><a href="#" style="color: var(--info); text-decoration: none;"><i class="ph ph-download-simple" style="font-size: 1.2rem;"></i></a></td>
+            </tr>
+            <tr>
+                <td><strong>07/05/2026</strong></td>
+                <td>2557909 - ADSO Nocturna</td>
+                <td style="color: var(--primary); font-weight: 600;">29</td>
+                <td style="color: var(--danger);">1</td>
+                <td style="color: var(--warning);">2</td>
+                <td><span class="badge badge-presente" style="padding: 4px 8px; font-size: 0.75rem;">Guardado</span></td>
+                <td style="text-align: right;"><a href="#" style="color: var(--info); text-decoration: none;"><i class="ph ph-download-simple" style="font-size: 1.2rem;"></i></a></td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+{% endblock %}

@@ -1,0 +1,87 @@
+{% extends 'base_aprendiz.html' %}
+{% set active_page = 'mis_asistencias' %}
+
+{% block content %}
+<div style="margin-bottom: 30px;">
+    <h2>MIS ASISTENCIAS</h2>
+    <p style="color: var(--text-muted);">Consulta tu historial diario de asistencia detallado por competencia y estado.</p>
+</div>
+
+<div class="card" style="display: flex; gap: 20px; align-items: center; padding: 15px 24px;">
+    <div style="flex: 1;">
+        <label style="display: block; font-size: 0.8rem; color: var(--text-muted); margin-bottom: 5px;">Filtrar por Fecha</label>
+        <input type="date" value="2026-03-13" style="width: 100%; background: var(--bg-main); border: 1px solid var(--border-color); padding: 10px; border-radius: 6px; color: var(--text-white);">
+    </div>
+    <div style="flex: 1;">
+        <label style="display: block; font-size: 0.8rem; color: var(--text-muted); margin-bottom: 5px;">Estado</label>
+        <select style="width: 100%; background: var(--bg-main); border: 1px solid var(--border-color); padding: 10px; border-radius: 6px; color: var(--text-white);">
+            <option>Todos los Estados</option>
+            <option>Presente</option>
+            <option>Falla</option>
+            <option>Excusa</option>
+            <option>Retardo</option>
+        </select>
+    </div>
+    <div style="flex: 2;">
+        <label style="display: block; font-size: 0.8rem; color: var(--text-muted); margin-bottom: 5px;">Competencia</label>
+        <select style="width: 100%; background: var(--bg-main); border: 1px solid var(--border-color); padding: 10px; border-radius: 6px; color: var(--text-white);">
+            <option>Desarrollo de componentes de software de acuerdo con las especificaciones</option>
+        </select>
+    </div>
+</div>
+
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+        <h3>Mi Historial de Asistencia Personal (Ficha 2557908 - ADSO)</h3>
+        <div style="display: flex; gap: 10px; font-size: 0.8rem;">
+            <span><i class="ph ph-circle-fill" style="color: var(--primary);"></i> Presente</span>
+            <span><i class="ph ph-circle-fill" style="color: var(--danger);"></i> Falla</span>
+            <span><i class="ph ph-circle-fill" style="color: var(--warning);"></i> Excusa</span>
+            <span><i class="ph ph-circle-fill" style="color: var(--info);"></i> Retardo</span>
+        </div>
+    </div>
+
+    <table class="custom-table">
+        <thead>
+            <tr>
+                <th>Fecha</th>
+                <th>Nombre</th>
+                <th>Documento</th>
+                <th>Perfil</th>
+                <th>Estado</th>
+                <th>Novedades</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>13/03/2026</td>
+                <td>Ana Gomez</td>
+                <td>2250597075</td>
+                <td>Aprendiz</td>
+                <td><span class="badge badge-presente">Presente</span></td>
+                <td>-</td>
+                <td><button style="background:transparent; border:none; color:var(--text-muted); cursor:pointer;"><i class="ph ph-eye"></i> Detalle</button></td>
+            </tr>
+            <tr>
+                <td>12/03/2026</td>
+                <td>Ana Gomez</td>
+                <td>2250597075</td>
+                <td>Aprendiz</td>
+                <td><span class="badge badge-excusa">Excusa</span></td>
+                <td><i class="ph ph-file-text" style="color: var(--warning);"></i> Médica</td>
+                <td><button style="background:transparent; border:none; color:var(--text-muted); cursor:pointer;"><i class="ph ph-eye"></i> Detalle</button></td>
+            </tr>
+            <tr>
+                <td>11/03/2026</td>
+                <td>Ana Gomez</td>
+                <td>2250597075</td>
+                <td>Aprendiz</td>
+                <td><span class="badge badge-presente">Presente</span></td>
+                <td>-</td>
+                <td><button style="background:transparent; border:none; color:var(--text-muted); cursor:pointer;"><i class="ph ph-eye"></i> Detalle</button></td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+{% endblock %}

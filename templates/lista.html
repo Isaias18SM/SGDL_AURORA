@@ -1,0 +1,52 @@
+{% extends 'base.html' %}
+{% set active_page = 'lista' %}
+
+{% block content %}
+<h2>LISTA DE ASISTENCIA</h2>
+<p style="color: var(--text-muted); margin-bottom: 20px;">Ficha activa actualmente para control de ingresos.</p>
+
+<div class="card">
+    <h3 style="margin-bottom: 15px;">
+        Lista de Asistencia Actual
+        {% if ficha_seleccionada %} - Ficha {{ ficha_seleccionada }}{% endif %}
+    </h3>
+    <table class="custom-table">
+        <thead>
+            <tr>
+                <th>Aprendiz - Nombre</th>
+                <th>Documento</th>
+                <th>Perfil</th>
+                <th>Estado</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for aprendiz in aprendices %}
+            <tr>
+                <td>{{ aprendiz.nombre }}</td>
+                <td>{{ aprendiz.documento }}</td>
+                <td>{{ aprendiz.perfil }}</td>
+                <td>
+                    {% if aprendiz.estado == 'Presente' %}
+                        <span class="badge badge-presente">Presente</span>
+                    {% elif aprendiz.estado == 'Falla' %}
+                        <span class="badge badge-falla">Falla</span>
+                    {% elif aprendiz.estado == 'Excusa' %}
+                        <span class="badge badge-excusa">Excusa</span>
+                    {% else %}
+                        <span class="badge badge-retardo">{{ aprendiz.estado }}</span>
+                    {% endif %}
+                </td>
+                <td><i class="ph ph-dots-three-vertical"></i></td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="5" style="text-align: center; color: var(--text-muted);">
+                    No hay aprendices registrados en esta ficha para el día de hoy.
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
