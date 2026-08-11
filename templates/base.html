@@ -18,6 +18,27 @@
                 <li class="nav-item {% if active_page == 'dashboard' %}active{% endif %}">
                     <a href="{{ url_for('dashboard') }}"><i class="ph ph-chart-pie"></i> Dashboard</a>
                 </li>
+
+                {% if session.get('rol') == 'coordinador' %}
+                <li class="nav-item {% if active_page == 'instructores' %}active{% endif %}">
+                    <a href="{{ url_for('coordinador_instructores') }}"><i class="ph ph-chalkboard-teacher"></i> Instructores</a>
+                </li>
+                <li class="nav-item {% if active_page == 'aprendices' %}active{% endif %}">
+                    <a href="{{ url_for('coordinador_aprendices') }}"><i class="ph ph-user-plus"></i> Aprendices</a>
+                </li>
+                <li class="nav-item {% if active_page == 'lista' %}active{% endif %}">
+                    <a href="{{ url_for('coordinador_lista_asistencia') }}"><i class="ph ph-clipboard-text"></i> Lista de Asistencia</a>
+                </li>
+                <li class="nav-item {% if active_page == 'reportes' %}active{% endif %}">
+                    <a href="{{ url_for('coordinador_reportes') }}"><i class="ph ph-chart-bar"></i> Reportes</a>
+                </li>
+                <li class="nav-item {% if active_page == 'novedades' %}active{% endif %}">
+                    <a href="{{ url_for('coordinador_novedades') }}"><i class="ph ph-bell"></i> Novedades</a>
+                </li>
+                <li class="nav-item {% if active_page == 'historial' %}active{% endif %}">
+                    <a href="{{ url_for('coordinador_historial') }}"><i class="ph ph-clock-history"></i> Historial</a>
+                </li>
+                {% else %}
                 <li class="nav-item {% if active_page == 'fichas' %}active{% endif %}">
                     <a href="{{ url_for('fichas') }}"><i class="ph ph-folder"></i> Mis Fichas</a>
                 </li>
@@ -33,6 +54,8 @@
                 <li class="nav-item {% if active_page == 'historial' %}active{% endif %}">
                     <a href="{{ url_for('historial') }}"><i class="ph ph-clock-history"></i> Historial</a>
                 </li>
+                {% endif %}
+
                 <li class="nav-item {% if active_page == 'config' %}active{% endif %}">
                     <a href="{{ url_for('configuracion') }}"><i class="ph ph-gear"></i> Configuración</a>
                 </li>
@@ -90,6 +113,19 @@
             </header>
 
             <div class="container-fluid">
+                {% with mensajes = get_flashed_messages(with_categories=true) %}
+                    {% if mensajes %}
+                    <div class="flash-container">
+                        {% for categoria, mensaje in mensajes %}
+                        <div class="flash-message flash-{{ categoria }}">
+                            <i class="ph {{ 'ph-check-circle' if categoria == 'success' else 'ph-warning-circle' }}"></i>
+                            <span>{{ mensaje }}</span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                {% endwith %}
+
                 {% block content %}{% endblock %}
             </div>
         </main>
