@@ -18,21 +18,45 @@
                 <li class="nav-item {% if active_page == 'dashboard' %}active{% endif %}">
                     <a href="{{ url_for('dashboard') }}"><i class="ph ph-chart-pie"></i> Dashboard</a>
                 </li>
+
+                {% if session.get('rol') == 'instructor' %}
                 <li class="nav-item {% if active_page == 'fichas' %}active{% endif %}">
                     <a href="{{ url_for('fichas') }}"><i class="ph ph-folder"></i> Mis Fichas</a>
                 </li>
+                {% endif %}
+
                 <li class="nav-item {% if active_page == 'lista' %}active{% endif %}">
+                    {% if session.get('rol') == 'coordinador' %}
+                    <a href="{{ url_for('lista_coordinador') }}"><i class="ph ph-clipboard-text"></i> Lista de Asistencia</a>
+                    {% else %}
                     <a href="{{ url_for('lista_asistencia') }}"><i class="ph ph-clipboard-text"></i> Lista de Asistencia</a>
+                    {% endif %}
                 </li>
+
                 <li class="nav-item {% if active_page == 'reportes' %}active{% endif %}">
+                    {% if session.get('rol') == 'coordinador' %}
+                    <a href="{{ url_for('reportes_coordinador') }}"><i class="ph ph-chart-bar"></i> Reportes</a>
+                    {% else %}
                     <a href="{{ url_for('modulos') }}"><i class="ph ph-chart-bar"></i> Reportes</a>
+                    {% endif %}
                 </li>
+
                 <li class="nav-item {% if active_page == 'novedades' %}active{% endif %}">
+                    {% if session.get('rol') == 'coordinador' %}
+                    <a href="{{ url_for('novedades_coordinador') }}"><i class="ph ph-bell"></i> Novedades</a>
+                    {% else %}
                     <a href="{{ url_for('novedades') }}"><i class="ph ph-bell"></i> Novedades</a>
+                    {% endif %}
                 </li>
+
                 <li class="nav-item {% if active_page == 'historial' %}active{% endif %}">
+                    {% if session.get('rol') == 'coordinador' %}
+                    <a href="{{ url_for('historial_coordinador') }}"><i class="ph ph-clock-history"></i> Historial</a>
+                    {% else %}
                     <a href="{{ url_for('historial') }}"><i class="ph ph-clock-history"></i> Historial</a>
+                    {% endif %}
                 </li>
+
                 <li class="nav-item {% if active_page == 'config' %}active{% endif %}">
                     <a href="{{ url_for('configuracion') }}"><i class="ph ph-gear"></i> Configuración</a>
                 </li>
