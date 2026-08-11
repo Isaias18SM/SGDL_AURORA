@@ -59,7 +59,7 @@
         </div>
         {% endif %}
 
-        <form method="POST" action="{{ url_for('login') }}" style="display:flex; flex-direction:column; gap:16px;">
+        <form method="POST" action="{{ url_for('auth.login') }}" style="display:flex; flex-direction:column; gap:16px;">
 
             <div class="form-group">
                 <label>Correo institucional SENA</label>
@@ -84,7 +84,7 @@
                 <i class="ph ph-sign-in"></i> Ingresar al Sistema
             </button>
 
-            <a href="{{ url_for('recuperar_contrasena') }}" style="text-align:center; color: var(--primary); text-decoration: none; font-size: 0.88rem; font-weight: 600;">
+            <a href="{{ url_for('auth.recuperar_contrasena') }}" style="text-align:center; color: var(--primary); text-decoration: none; font-size: 0.88rem; font-weight: 600;">
                 ¿Olvidaste tu contraseña?
             </a>
         </form>
