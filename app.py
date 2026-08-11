@@ -103,27 +103,6 @@ def solo_rol_api(*roles):
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# DATOS MOCK COMPARTIDOS (mientras no hay consultas reales para estas vistas)
-# ══════════════════════════════════════════════════════════════════════════════
-INSTRUCTORES_MOCK = [
-    {"id": 1, "nombre": "Juan Pérez", "especialidad": "Análisis y Desarrollo de Software"},
-]
-
-FICHAS_MOCK = [
-    {"codigo": "2557908", "programa": "Análisis y Desarrollo de Software", "jornada": "Diurna",   "aprendices_activos": 35, "instructor_id": 1},
-    {"codigo": "2557909", "programa": "Análisis y Desarrollo de Software", "jornada": "Nocturna", "aprendices_activos": 32, "instructor_id": None},
-]
-
-APRENDICES_MOCK = [
-    {"id": 1, "nombre": "Ana Gomez",       "documento": "2250597075",  "perfil": "Aprendiz", "estado": "Presente", "ficha": "2557908"},
-    {"id": 2, "nombre": "Luis Rodriguez",  "documento": "224204312",   "perfil": "Aprendiz", "estado": "Falla",    "ficha": "2557908"},
-    {"id": 3, "nombre": "María Turranez",  "documento": "25502511106", "perfil": "Aprendiz", "estado": "Excusa",   "ficha": "2557908"},
-    {"id": 4, "nombre": "Carlos Mendoza",  "documento": "224204313",   "perfil": "Aprendiz", "estado": "Retardo",  "ficha": "2557909"},
-    {"id": 5, "nombre": "Laura Pérez",     "documento": "255027512",   "perfil": "Aprendiz", "estado": "Presente", "ficha": "2557909"},
-]
-
-
-# ══════════════════════════════════════════════════════════════════════════════
 # AUTENTICACIÓN
 # ══════════════════════════════════════════════════════════════════════════════
 @app.route('/', methods=['GET', 'POST'])
@@ -195,15 +174,15 @@ def recuperar_contrasena():
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# PORTAL INSTRUCTOR (rutas exclusivas — el coordinador tiene las suyas abajo)
+# PORTAL INSTRUCTOR / COORDINADOR
 # ══════════════════════════════════════════════════════════════════════════════
 @app.route('/dashboard')
 @solo_rol('instructor', 'coordinador')
 def dashboard():
     """
     Pantalla de bienvenida del Instructor/Coordinador.
-    Es una vista genérica (usa session['rol'] para el saludo), por eso
-    la comparten ambos roles sin necesidad de una plantilla aparte.
+    Ya no muestra métricas ni estadísticas: es una vista de bienvenida a
+    pantalla completa con saludo dinámico según la hora del día.
     """
     hora_actual = datetime.now().hour
     if 5 <= hora_actual < 12:
@@ -228,22 +207,33 @@ def dashboard():
 
 
 @app.route('/fichas')
-@solo_rol('instructor')
+@solo_rol('instructor', 'coordinador')
 def fichas():
     return render_template('fichas.html', active_page='fichas')
 
 
 @app.route('/lista-asistencia', methods=['GET', 'POST'])
-@solo_rol('instructor')
+@solo_rol('instructor', 'coordinador')
 def lista_asistencia():
+    # Datos mock mientras no hay asistencia real cargada.
+    # Cada aprendiz queda asociado a una ficha para que el botón
+    # "Consultar Fichas" pueda filtrar correctamente al seleccionar una.
+    aprendices_mock = [
+        {"id": 1, "nombre": "Ana Gomez",       "documento": "2250597075",  "perfil": "Aprendiz", "estado": "Presente", "ficha": "2557908"},
+        {"id": 2, "nombre": "Luis Rodriguez",  "documento": "224204312",   "perfil": "Aprendiz", "estado": "Falla",    "ficha": "2557908"},
+        {"id": 3, "nombre": "María Turranez",  "documento": "25502511106", "perfil": "Aprendiz", "estado": "Excusa",   "ficha": "2557908"},
+        {"id": 4, "nombre": "Carlos Mendoza",  "documento": "224204313",   "perfil": "Aprendiz", "estado": "Retardo",  "ficha": "2557909"},
+        {"id": 5, "nombre": "Laura Pérez",     "documento": "255027512",   "perfil": "Aprendiz", "estado": "Presente", "ficha": "2557909"},
+    ]
+
     ficha_seleccionada = request.args.get('ficha', '').strip()
 
     if ficha_seleccionada:
-        aprendices = [a for a in APRENDICES_MOCK if a['ficha'] == ficha_seleccionada]
+        aprendices = [a for a in aprendices_mock if a['ficha'] == ficha_seleccionada]
     else:
         # Sin filtro explícito, se muestra la ficha activa por defecto
-        aprendices = APRENDICES_MOCK
-        ficha_seleccionada = APRENDICES_MOCK[0]['ficha'] if APRENDICES_MOCK else None
+        aprendices = aprendices_mock
+        ficha_seleccionada = aprendices_mock[0]['ficha'] if aprendices_mock else None
 
     return render_template(
         'lista.html',
@@ -254,19 +244,19 @@ def lista_asistencia():
 
 
 @app.route('/reportes')
-@solo_rol('instructor')
+@solo_rol('instructor', 'coordinador')
 def modulos():
     return render_template('modulos.html', active_page='reportes')
 
 
 @app.route('/novedades')
-@solo_rol('instructor')
+@solo_rol('instructor', 'coordinador')
 def novedades():
     return render_template('novedades.html', active_page='novedades')
 
 
 @app.route('/historial')
-@solo_rol('instructor')
+@solo_rol('instructor', 'coordinador')
 def historial():
     return render_template('historial.html', active_page='historial')
 
@@ -359,7 +349,11 @@ def api_fichas():
         SELECT CODIGO_FICHA, PROGRAMA, JORNADA, ID_INSTRUCTOR
         FROM ficha WHERE ID_INSTRUCTOR = %s
     """
-    return jsonify({"status": "success", "fichas": FICHAS_MOCK})
+    fichas_mock = [
+        {"codigo": "2557908", "programa": "Análisis y Desarrollo de Software", "jornada": "Diurna",   "aprendices_activos": 35},
+        {"codigo": "2557909", "programa": "Análisis y Desarrollo de Software", "jornada": "Nocturna", "aprendices_activos": 32},
+    ]
+    return jsonify({"status": "success", "fichas": fichas_mock})
 
 
 @app.route('/api/cambiar-estado', methods=['POST'])
@@ -367,57 +361,6 @@ def api_fichas():
 def api_cambiar_estado():
     data = request.get_json()
     return jsonify({"status": "success", "message": "Estado actualizado correctamente"})
-
-
-# ══════════════════════════════════════════════════════════════════════════════
-# PORTAL COORDINADOR (rutas propias, con vista consolidada de TODAS las fichas)
-# ══════════════════════════════════════════════════════════════════════════════
-@app.route('/coordinador/lista-asistencia')
-@solo_rol('coordinador')
-def lista_coordinador():
-    """Vista consolidada de asistencia de todas las fichas del programa."""
-    ficha_filtro = request.args.get('ficha', '').strip()
-
-    if ficha_filtro:
-        aprendices = [a for a in APRENDICES_MOCK if a['ficha'] == ficha_filtro]
-    else:
-        aprendices = APRENDICES_MOCK
-
-    return render_template(
-        'lista_coordinador.html',
-        active_page='lista',
-        aprendices=aprendices,
-        fichas=FICHAS_MOCK,
-        ficha_filtro=ficha_filtro
-    )
-
-
-@app.route('/coordinador/reportes')
-@solo_rol('coordinador')
-def reportes_coordinador():
-    return render_template(
-        'reportes_coordinador.html',
-        active_page='reportes',
-        instructores=INSTRUCTORES_MOCK,
-        fichas=FICHAS_MOCK
-    )
-
-
-@app.route('/coordinador/novedades')
-@solo_rol('coordinador')
-def novedades_coordinador():
-    return render_template('novedades_coordinador.html', active_page='novedades')
-
-
-@app.route('/coordinador/historial')
-@solo_rol('coordinador')
-def historial_coordinador():
-    return render_template(
-        'historia_coordinador.html',
-        active_page='historial',
-        fichas=FICHAS_MOCK,
-        instructores=INSTRUCTORES_MOCK
-    )
 
 
 # ══════════════════════════════════════════════════════════════════════════════
