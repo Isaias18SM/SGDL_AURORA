@@ -19,7 +19,7 @@ def login():
         if usuario:
             session['correo'] = usuario['correo']
             session['nombre'] = usuario['nombre']
-            session['rol'] = usuario['rol']
+            session['rol'] = usuario['rol'].lower().strip()
             session['id'] = usuario['id']
             return redirect(url_for('auth.dashboard_segun_rol'))
         else:
@@ -27,18 +27,27 @@ def login():
 
     return render_template('login.html', error=error)
 
+
 @auth_bp.route('/ir-dashboard')
 @login_requerido
 def dashboard_segun_rol():
     rol = session.get('rol')
+
     if rol == 'aprendiz':
         return redirect(url_for('aprendiz.dashboard_aprendiz'))
-    return redirect(url_for('instructor.dashboard'))
+    elif rol in ('instructor', 'coordinador'):
+        return redirect(url_for('instructor.dashboard'))
+    else:
+        # Rol desconocido/corrupto: no reintentar el loop, cerrar sesión
+        session.clear()
+        return redirect(url_for('auth.login'))
+
 
 @auth_bp.route('/logout')
 def logout():
     session.clear()
     return redirect(url_for('auth.login'))
+
 
 @auth_bp.route('/recuperar-contrasena', methods=['GET', 'POST'])
 def recuperar_contrasena():

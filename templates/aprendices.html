@@ -101,7 +101,7 @@
     </div>
 
     <div class="tab-panel active" id="tab-individual">
-        <form method="POST" action="{{ url_for('coordinador_aprendiz_manual') }}" class="form-grid">
+        <form method="POST" action="{{ url_for('coordinador.aprendiz_manual') }}" class="form-grid">
             <div class="form-group">
                 <label class="form-label">Nombres</label>
                 <input type="text" name="nombres" class="form-input" required>
@@ -142,7 +142,7 @@
     </div>
 
     <div class="tab-panel" id="tab-masiva">
-        <form method="POST" action="{{ url_for('coordinador_aprendices_masivo') }}" enctype="multipart/form-data" class="form-grid">
+        <form method="POST" action="{{ url_for('coordinador.aprendices_masivo') }}" enctype="multipart/form-data" class="form-grid">
             <div class="form-group form-group-full">
                 <label class="form-label">Archivo CSV</label>
                 <input type="file" name="archivo_csv" accept=".csv" class="form-input" required>

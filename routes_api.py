@@ -5,7 +5,7 @@ from decorators import solo_rol_api, login_requerido
 api_bp = Blueprint('api', __name__)
 
 @api_bp.route('/api/buscar-aprendiz')
-@solo_rol_api('instructor')
+@solo_rol_api('instructor', 'coordinador')
 def api_buscar_aprendiz():
     documento = request.args.get('documento', '').strip()
     tipo = request.args.get('tipo', '').strip().upper()
@@ -16,49 +16,75 @@ def api_buscar_aprendiz():
     if tipo not in ('CC', 'TI'):
         tipo = None
 
+    conn = None
     try:
         conn = get_db()
         with conn.cursor() as cur:
+            sql = """
+                SELECT u.*, f.No_FICHA
+                FROM usuario u
+                LEFT JOIN usuario_ficha_asignacion ufa ON ufa.Id_Usuario = u.Id_Usuario
+                LEFT JOIN ficha f ON f.ID_FICHA = ufa.ID_FICHA
+                WHERE u.No_Documento = %s
+                  AND u.ROL = %s
+            """
+            params = [documento, 'Aprendiz']
+
             if tipo:
-                cur.execute(
-                    "SELECT * FROM aprendiz WHERE NUMERO_DOCUMENTO = %s AND TIPO_DOCUMENTO = %s",
-                    (documento, tipo)
-                )
-            else:
-                cur.execute(
-                    "SELECT * FROM aprendiz WHERE NUMERO_DOCUMENTO = %s AND TIPO_DOCUMENTO IN ('CC', 'TI')",
-                    (documento,)
-                )
+                sql += " AND u.TPI_DOCUMENTO = %s"
+                params.append(tipo)
+
+            cur.execute(sql, tuple(params))
             fila = cur.fetchone()
-        conn.close()
     except Exception as e:
         print(f"[DB ERROR] {e}")
         return jsonify({"status": "error", "message": "Error al consultar la base de datos."}), 500
+    finally:
+        if conn:
+            conn.close()
 
     if not fila:
         return jsonify({"status": "not_found", "message": "No se encontró ningún aprendiz con ese número de documento."}), 404
 
-    nombre = f"{fila.get('NOMBRES', '')} {fila.get('APELLIDOS', '')}".strip()
+    nombre = f"{fila.get('Nombre', '')} {fila.get('Apellidos', '')}".strip()
     return jsonify({
         "status": "success",
         "aprendiz": {
-            "id": fila.get('ID_APRENDIZ'),
+            "id": fila.get('Id_Usuario'),
             "nombre": nombre,
-            "tipo_documento": fila.get('TIPO_DOCUMENTO'),
-            "numero_documento": fila.get('NUMERO_DOCUMENTO'),
+            "tipo_documento": fila.get('TPI_DOCUMENTO'),
+            "numero_documento": fila.get('No_Documento'),
             "correo": fila.get('CORREO_SENA'),
-            "ficha": fila.get('FICHA'),
+            "ficha": fila.get('No_FICHA'),
         }
     })
 
+
 @api_bp.route('/api/fichas')
-@solo_rol_api('instructor')
+@solo_rol_api('instructor', 'coordinador')
 def api_fichas():
-    fichas_mock = [
-        {"codigo": "2557908", "programa": "Análisis y Desarrollo de Software", "jornada": "Diurna", "aprendices_activos": 35},
-        {"codigo": "2557909", "programa": "Análisis y Desarrollo de Software", "jornada": "Nocturna", "aprendices_activos": 32},
-    ]
-    return jsonify({"status": "success", "fichas": fichas_mock})
+    conn = None
+    try:
+        conn = get_db()
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT f.ID_FICHA, f.No_FICHA, f.Jornada, f.TipoDeFicha,
+                       COUNT(ufa.Id_Usuario) AS aprendices_activos
+                FROM ficha f
+                LEFT JOIN usuario_ficha_asignacion ufa ON ufa.ID_FICHA = f.ID_FICHA
+                LEFT JOIN usuario u ON u.Id_Usuario = ufa.Id_Usuario AND u.ROL = 'Aprendiz' AND u.Activo_SN = '1'
+                GROUP BY f.ID_FICHA, f.No_FICHA, f.Jornada, f.TipoDeFicha
+            """)
+            fichas = cur.fetchall()
+    except Exception as e:
+        print(f"[DB ERROR] {e}")
+        return jsonify({"status": "error", "message": "Error al consultar la base de datos."}), 500
+    finally:
+        if conn:
+            conn.close()
+
+    return jsonify({"status": "success", "fichas": fichas})
+
 
 @api_bp.route('/api/cambiar-estado', methods=['POST'])
 @login_requerido

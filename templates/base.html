@@ -20,25 +20,23 @@
                 </li>
 
                 {% if session.get('rol') == 'coordinador' %}
-                <li class="nav-item {% if active_page == 'instructores' %}active{% endif %}">
-                    <a href="{{ url_for('coordinador_instructores') }}"><i class="ph ph-chalkboard-teacher"></i> Instructores</a>
-                </li>
-                <li class="nav-item {% if active_page == 'aprendices' %}active{% endif %}">
-                    <a href="{{ url_for('coordinador_aprendices') }}"><i class="ph ph-user-plus"></i> Aprendices</a>
-                </li>
-                <li class="nav-item {% if active_page == 'lista' %}active{% endif %}">
-                    <a href="{{ url_for('coordinador_lista_asistencia') }}"><i class="ph ph-clipboard-text"></i> Lista de Asistencia</a>
-                </li>
-                <li class="nav-item {% if active_page == 'reportes' %}active{% endif %}">
-                    <a href="{{ url_for('coordinador_reportes') }}"><i class="ph ph-chart-bar"></i> Reportes</a>
-                </li>
-                <li class="nav-item {% if active_page == 'novedades' %}active{% endif %}">
-                    <a href="{{ url_for('coordinador_novedades') }}"><i class="ph ph-bell"></i> Novedades</a>
-                </li>
-                <li class="nav-item {% if active_page == 'historial' %}active{% endif %}">
-                    <a href="{{ url_for('coordinador_historial') }}"><i class="ph ph-clock-history"></i> Historial</a>
-                </li>
-                {% else %}
+
+<li class="nav-item {% if active_page == 'formulario' %}active{% endif %}">
+    <a href="{{ url_for('coordinador.formulario_coordinador') }}"><i class="ph ph-folder"></i> formulario</a>
+</li>
+<li class="nav-item {% if active_page == 'lista' %}active{% endif %}">
+    <a href="{{ url_for('coordinador.lista_coordinador') }}"><i class="ph ph-clipboard-text"></i> Lista de Asistencia</a>
+</li>
+<li class="nav-item {% if active_page == 'reportes' %}active{% endif %}">
+    <a href="{{ url_for('coordinador.reportes_coordinador') }}"><i class="ph ph-chart-bar"></i> Reportes</a>
+</li>
+<li class="nav-item {% if active_page == 'novedades' %}active{% endif %}">
+    <a href="{{ url_for('coordinador.novedades_coordinador') }}"><i class="ph ph-bell"></i> Novedades</a>
+</li>
+<li class="nav-item {% if active_page == 'historial' %}active{% endif %}">
+    <a href="{{ url_for('coordinador.historia_coordinador') }}"><i class="ph ph-clock-history"></i> Historial</a>
+</li>
+{% else %}
                 <li class="nav-item {% if active_page == 'fichas' %}active{% endif %}">
                     <a href="{{ url_for('instructor.fichas') }}"><i class="ph ph-folder"></i> Mis Fichas</a>
                 </li>
