@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template
-from decorators import solo_rol
-from database import get_db
+from app.utils.decorators import solo_rol
+from app.database import get_db
 
 fichas_bp = Blueprint('fichas', __name__)
 

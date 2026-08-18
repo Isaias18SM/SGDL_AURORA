@@ -1,7 +1,7 @@
 from datetime import datetime
 from flask import Blueprint, render_template, request, session
 from app.utils.decorators import solo_rol, login_requerido
-from database import obtener_fichas, obtener_aprendices_por_ficha
+from app.database import obtener_fichas, obtener_aprendices_por_ficha
 
 instructor_bp = Blueprint('instructor', __name__)
 
