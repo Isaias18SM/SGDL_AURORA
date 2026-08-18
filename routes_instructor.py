@@ -1,8 +1,7 @@
 from datetime import datetime
 from flask import Blueprint, render_template, request, session
 from decorators import solo_rol, login_requerido
-from database import obtener_fichas, obtener_aprendices_por_ficha
-
+from database import obtener_fichas, obtener_aprendices_por_ficha, actualizar_perfil_usuario
 instructor_bp = Blueprint('instructor', __name__)
 
 
@@ -14,7 +13,7 @@ def dashboard():
         saludo = "Buenos días"
     elif 12 <= hora_actual < 19:
         saludo = "Buenas tardes"
-    else:
+    else:   
         saludo = "Buenas noches"
 
     dias = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"]
@@ -66,13 +65,29 @@ def novedades():
 def historial():
     return render_template('historial.html', active_page='historial')
 
-
 @instructor_bp.route('/configuracion', methods=['GET', 'POST'])
 @login_requerido
 def configuracion():
+    mensaje = None
+    if request.method == 'POST':
+        nombre = request.form.get('nombre', '').strip()
+        email = request.form.get('email', '').strip()
+
+        if not nombre or not email or '@' not in email:
+            mensaje = ('error', 'Verifica que el nombre y el correo sean válidos.')
+        else:
+            resultado = actualizar_perfil_usuario(session.get('id'), nombre, email)
+            if resultado['ok']:
+                # Refleja el cambio también en la sesión activa
+                session['nombre'] = nombre
+                session['correo'] = email
+                mensaje = ('exito', resultado['message'])
+            else:
+                mensaje = ('error', resultado['message'])
+
     user_info = {
         "nombre": session.get('nombre', 'Usuario'),
         "email": session.get('correo', ''),
         "rol": session.get('rol', '')
     }
-    return render_template('configuracion.html', active_page='config', user=user_info)
+    return render_template('configuracion.html', active_page='config', user=user_info, mensaje=mensaje)

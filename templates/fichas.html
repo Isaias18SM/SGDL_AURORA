@@ -8,35 +8,51 @@
 </div>
 
 <div class="dashboard-grid">
-    {% if fichas %}
-        {% for f in fichas %}
-        <div class="card" style="display: flex; flex-direction: column; justify-content: space-between; gap: 15px;">
-            <div>
-                <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-                    <h3 style="color: var(--primary);">Ficha {{ f.codigo }}</h3>
-                    <span class="badge badge-presente" style="font-size: 0.75rem;">{{ f.tipo_ficha }}</span>
-                </div>
-                <p style="color: var(--text-muted); margin-top: 10px; font-size: 0.9rem;">
-                    {{ f.programa }}{% if f.jornada %} · {{ f.jornada }}{% endif %}
-                </p>
-                <div style="margin-top: 15px; display: flex; align-items: center; gap: 8px; color: var(--text-muted); font-size: 0.85rem;">
-                    <i class="ph ph-users"></i>
-                    <span>{{ f.aprendices_activos }} Aprendices activos</span>
-                </div>
+    {% for f in fichas %}
+    <div class="card" style="display: flex; flex-direction: column; justify-content: space-between; gap: 15px;">
+        <div>
+            <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                <h3 style="color: var(--primary);">Ficha {{ f.codigo }}</h3>
+                <span class="badge badge-presente" style="font-size: 0.75rem;">ADSO</span>
             </div>
-            <div style="display: flex; gap: 10px; margin-top: 10px;">
-                <a href="{{ url_for('instructor.lista_asistencia', ficha=f.codigo) }}"
-                   style="flex: 1; text-align: center; background: var(--primary); color: var(--bg-main); padding: 10px; border-radius: 6px; font-weight: bold; text-decoration: none; font-size: 0.9rem;">
-                   Iniciar Sesión
-                </a>
-                <button style="background: transparent; border: 1px solid var(--border-color); color: var(--text-white); padding: 10px; border-radius: 6px; cursor: pointer;">
-                    <i class="ph ph-eye"></i>
-                </button>
+            <p style="color: var(--text-muted); margin-top: 10px; font-size: 0.9rem;">
+                {{ f.programa }}
+            </p>
+            <div style="margin-top: 15px; display: flex; align-items: center; gap: 8px; color: var(--text-muted); font-size: 0.85rem;">
+                <i class="ph ph-users"></i>
+                <span>{{ f.aprendices_activos }} Aprendices activos</span>
             </div>
         </div>
-        {% endfor %}
+        <div style="display: flex; gap: 10px; margin-top: 10px;">
+            {% if f.sesion_hoy %}
+            <a href="{{ url_for('lista_asistencia', ficha=f.codigo) }}"
+               style="flex: 1; text-align: center; background: var(--primary); color: var(--bg-main); padding: 10px; border-radius: 6px; font-weight: bold; text-decoration: none; font-size: 0.9rem;">
+                Iniciar Sesión
+            </a>
+            {% else %}
+            <button disabled style="flex: 1; background: var(--border-color); color: var(--text-muted); padding: 10px; border-radius: 6px; font-weight: bold; border: none; cursor: not-allowed;">
+                Sin sesión hoy
+            </button>
+            {% endif %}
+            <button type="button" class="btn-ver-ficha" data-codigo="{{ f.codigo }}"
+                    style="background: transparent; border: 1px solid var(--border-color); color: var(--text-white); padding: 10px; border-radius: 6px; cursor: pointer;">
+                <i class="ph ph-eye"></i>
+            </button>
+        </div>
+    </div>
     {% else %}
-        <p style="color: var(--text-muted);">No tienes fichas asignadas por el momento.</p>
-    {% endif %}
+    <p style="color: var(--text-muted);">No tienes fichas asignadas todavía.</p>
+    {% endfor %}
 </div>
+
+<script>
+    // Botón "ojo": lleva directo a la lista de asistencia de esa ficha
+    // en modo solo lectura (misma vista, solo cambia el filtro).
+    document.querySelectorAll('.btn-ver-ficha').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const codigo = btn.dataset.codigo;
+            window.location.href = `/lista-asistencia?ficha=${encodeURIComponent(codigo)}`;
+        });
+    });
+</script>
 {% endblock %}

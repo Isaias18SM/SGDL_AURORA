@@ -12,7 +12,7 @@ def _obtener_fichas():
     conn = get_db()
     try:
         with conn.cursor() as cur:
-            cur.execute("SELECT ID_FICHA AS codigo, No_FICHA AS programa FROM ficha")
+            cur.execute("SELECT ID_FICHA, No_FICHA FROM ficha ORDER BY No_FICHA")
             return cur.fetchall()
     finally:
         conn.close()
@@ -76,7 +76,6 @@ def formulario_coordinador():
         aprendices=_obtener_aprendices()
     )
 
-
 @coordinador.route('/coordinador/aprendiz-manual', methods=['POST'])
 @solo_rol('coordinador')
 def aprendiz_manual():
@@ -85,27 +84,31 @@ def aprendiz_manual():
     tipo_doc = request.form.get('tipo_documento', '').strip()
     num_doc = request.form.get('numero_documento', '').strip()
     correo = request.form.get('correo', '').strip().lower()
-    ficha_id = request.form.get('ficha', '').strip()
+    no_ficha = request.form.get('ficha', '').strip()
 
-    if not (nombres and apellidos and tipo_doc and num_doc and ficha_id):
+    if not (nombres and apellidos and tipo_doc and num_doc and no_ficha):
         flash('Completa todos los campos obligatorios.', 'error')
         return redirect(url_for('coordinador.formulario_coordinador'))
 
     conn = get_db()
     try:
         with conn.cursor() as cur:
-            # Buscar una asignación ya existente para esta ficha
+            # Buscar la ficha real y su asignación usando el número de ficha (No_FICHA)
             cur.execute(
-                "SELECT ID_ASIGNACION FROM usuario_ficha_asignacion WHERE ID_FICHA = %s LIMIT 1",
-                (ficha_id,)
+                """SELECT f.ID_FICHA, ufa.ID_ASIGNACION
+                   FROM ficha f
+                   JOIN usuario_ficha_asignacion ufa ON ufa.ID_FICHA = f.ID_FICHA
+                   WHERE f.No_FICHA = %s LIMIT 1""",
+                (no_ficha,)
             )
-            asignacion = cur.fetchone()
+            resultado = cur.fetchone()
 
-            if not asignacion:
-                flash('Esta ficha todavía no tiene una asignación (instructor/horario) creada. Créala antes de registrar aprendices.', 'error')
+            if not resultado:
+                flash(f'La ficha {no_ficha} no existe o no tiene una asignación (instructor/horario) creada.', 'error')
                 return redirect(url_for('coordinador.formulario_coordinador'))
 
-            id_asignacion = asignacion['ID_ASIGNACION']
+            id_ficha = resultado['ID_FICHA']
+            id_asignacion = resultado['ID_ASIGNACION']
 
             cur.execute(
                 """INSERT INTO usuario
@@ -117,7 +120,7 @@ def aprendiz_manual():
 
             cur.execute(
                 "INSERT INTO usuario_ficha_asignacion (Id_Usuario, ID_FICHA, ID_ASIGNACION) VALUES (%s, %s, %s)",
-                (nuevo_id, ficha_id, id_asignacion)
+                (nuevo_id, id_ficha, id_asignacion)
             )
         conn.commit()
         flash('Aprendiz registrado correctamente.', 'success')
@@ -129,7 +132,6 @@ def aprendiz_manual():
         conn.close()
 
     return redirect(url_for('coordinador.formulario_coordinador'))
-
 
 @coordinador.route('/coordinador/aprendices-masivo', methods=['POST'])
 @solo_rol('coordinador')
@@ -146,25 +148,33 @@ def aprendices_masivo():
 
     conn = get_db()
     insertados, errores = 0, 0
+    detalle_errores = []
     try:
         with conn.cursor() as cur:
-            for fila in lector:
+            for i, fila in enumerate(lector, start=2):  # fila 2 = primera fila de datos (después del encabezado)
                 try:
-                    ficha_fila = (fila.get('ficha') or ficha_default or '').strip()
-                    if not ficha_fila:
+                    no_ficha = (fila.get('ficha') or ficha_default or '').strip()
+                    if not no_ficha:
                         errores += 1
+                        detalle_errores.append(f"Fila {i}: sin ficha especificada.")
                         continue
 
-                    # Buscar una asignación ya existente para esa ficha
+                    # Buscar la ficha real y su asignación usando el número de ficha (No_FICHA)
                     cur.execute(
-                        "SELECT ID_ASIGNACION FROM usuario_ficha_asignacion WHERE ID_FICHA = %s LIMIT 1",
-                        (ficha_fila,)
+                        """SELECT f.ID_FICHA, ufa.ID_ASIGNACION
+                           FROM ficha f
+                           JOIN usuario_ficha_asignacion ufa ON ufa.ID_FICHA = f.ID_FICHA
+                           WHERE f.No_FICHA = %s LIMIT 1""",
+                        (no_ficha,)
                     )
-                    asignacion = cur.fetchone()
-                    if not asignacion:
+                    resultado = cur.fetchone()
+                    if not resultado:
                         errores += 1
+                        detalle_errores.append(f"Fila {i}: la ficha {no_ficha} no existe o no tiene asignación.")
                         continue
-                    id_asignacion = asignacion['ID_ASIGNACION']
+
+                    id_ficha = resultado['ID_FICHA']
+                    id_asignacion = resultado['ID_ASIGNACION']
 
                     cur.execute(
                         """INSERT INTO usuario
@@ -178,14 +188,19 @@ def aprendices_masivo():
 
                     cur.execute(
                         "INSERT INTO usuario_ficha_asignacion (Id_Usuario, ID_FICHA, ID_ASIGNACION) VALUES (%s, %s, %s)",
-                        (nuevo_id, ficha_fila, id_asignacion)
+                        (nuevo_id, id_ficha, id_asignacion)
                     )
                     insertados += 1
                 except Exception as e:
-                    print(f"[DB ERROR fila] {e}")
+                    print(f"[DB ERROR fila {i}] {e}")
                     errores += 1
+                    detalle_errores.append(f"Fila {i}: documento duplicado o dato inválido.")
         conn.commit()
-        flash(f'{insertados} aprendices cargados correctamente. {errores} con error.', 'success' if insertados else 'error')
+
+        mensaje = f'{insertados} aprendices cargados correctamente. {errores} con error.'
+        if detalle_errores:
+            mensaje += ' Detalle: ' + ' | '.join(detalle_errores[:5])
+        flash(mensaje, 'success' if insertados else 'error')
     except Exception as e:
         conn.rollback()
         print(f"[DB ERROR] {e}")

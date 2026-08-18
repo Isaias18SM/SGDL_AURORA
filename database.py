@@ -123,3 +123,38 @@ def buscar_aprendiz_por_documento(documento, tipo_doc=None):
     finally:
         if conn:
             conn.close()
+
+
+def actualizar_perfil_usuario(id_usuario, nombre_completo, correo):
+    """Actualiza el nombre y correo de un usuario (instructor/coordinador)."""
+    conn = None
+    try:
+        # La tabla separa Nombre y Apellidos, así que dividimos el texto ingresado
+        partes = nombre_completo.strip().split(' ', 1)
+        nombre = partes[0]
+        apellidos = partes[1] if len(partes) > 1 else ''
+
+        conn = get_db()
+        with conn.cursor() as cur:
+            # Evita guardar el correo si ya lo tiene otro usuario
+            cur.execute(
+                "SELECT Id_Usuario FROM usuario WHERE CORREO_SENA = %s AND Id_Usuario != %s",
+                (correo, id_usuario)
+            )
+            if cur.fetchone():
+                return {"ok": False, "message": "Ese correo ya está en uso por otro usuario."}
+
+            cur.execute(
+                "UPDATE usuario SET Nombre = %s, Apellidos = %s, CORREO_SENA = %s WHERE Id_Usuario = %s",
+                (nombre, apellidos, correo, id_usuario)
+            )
+            conn.commit()
+            return {"ok": True, "message": "Perfil actualizado correctamente."}
+    except Exception as e:
+        print(f"[DB ERROR] {e}")
+        if conn:
+            conn.rollback()
+        return {"ok": False, "message": "Ocurrió un error al guardar en la base de datos."}
+    finally:
+        if conn:
+            conn.close()
