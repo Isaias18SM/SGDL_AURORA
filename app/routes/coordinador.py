@@ -2,8 +2,8 @@ import csv
 import io
 
 from flask import Blueprint, render_template, request, redirect, url_for, flash
-from decorators import solo_rol
-from database import get_db
+from app.utils.decorators import solo_rol
+from app.database import get_db
 
 coordinador = Blueprint('coordinador', __name__)
 

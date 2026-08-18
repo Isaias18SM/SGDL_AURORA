@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify
-from database import get_db
-from decorators import solo_rol_api, login_requerido
+from app.database import get_db
+from app.utils.decorators import solo_rol_api, login_requerido
 
 api_bp = Blueprint('api', __name__)
 
