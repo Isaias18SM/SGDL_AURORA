@@ -4,6 +4,7 @@ from app.utils.decorators import solo_rol_api, login_requerido
 
 api_bp = Blueprint('api', __name__)
 
+
 @api_bp.route('/api/buscar-aprendiz')
 @solo_rol_api('instructor', 'coordinador')
 def api_buscar_aprendiz():
@@ -68,12 +69,18 @@ def api_fichas():
         conn = get_db()
         with conn.cursor() as cur:
             cur.execute("""
-                SELECT f.ID_FICHA, f.No_FICHA, f.Jornada, f.TipoDeFicha,
+                SELECT f.ID_FICHA,
+                       f.No_FICHA        AS codigo,
+                       f.Jornada         AS jornada,
+                       f.TipoDeFicha     AS tipo_ficha,
+                       p.Nombre          AS programa,
                        COUNT(ufa.Id_Usuario) AS aprendices_activos
                 FROM ficha f
+                JOIN programa p ON p.Id_Programa = f.Id_Programa
                 LEFT JOIN usuario_ficha_asignacion ufa ON ufa.ID_FICHA = f.ID_FICHA
                 LEFT JOIN usuario u ON u.Id_Usuario = ufa.Id_Usuario AND u.ROL = 'Aprendiz' AND u.Activo_SN = '1'
-                GROUP BY f.ID_FICHA, f.No_FICHA, f.Jornada, f.TipoDeFicha
+                GROUP BY f.ID_FICHA, f.No_FICHA, f.Jornada, f.TipoDeFicha, p.Nombre
+                ORDER BY f.No_FICHA
             """)
             fichas = cur.fetchall()
     except Exception as e:
