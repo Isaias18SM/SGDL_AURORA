@@ -8,44 +8,35 @@
 </div>
 
 <div class="dashboard-grid">
-    <div class="card" style="display: flex; flex-direction: column; justify-content: space-between; gap: 15px;">
-        <div>
-            <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-                <h3 style="color: var(--primary);">Ficha 2557908</h3>
-                <span class="badge badge-presente" style="font-size: 0.75rem;">ADSO</span>
+    {% if fichas %}
+        {% for f in fichas %}
+        <div class="card" style="display: flex; flex-direction: column; justify-content: space-between; gap: 15px;">
+            <div>
+                <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                    <h3 style="color: var(--primary);">Ficha {{ f.codigo }}</h3>
+                    <span class="badge badge-presente" style="font-size: 0.75rem;">{{ f.tipo_ficha }}</span>
+                </div>
+                <p style="color: var(--text-muted); margin-top: 10px; font-size: 0.9rem;">
+                    {{ f.programa }}{% if f.jornada %} · {{ f.jornada }}{% endif %}
+                </p>
+                <div style="margin-top: 15px; display: flex; align-items: center; gap: 8px; color: var(--text-muted); font-size: 0.85rem;">
+                    <i class="ph ph-users"></i>
+                    <span>{{ f.aprendices_activos }} Aprendices activos</span>
+                </div>
             </div>
-            <p style="color: var(--text-muted); margin-top: 10px; font-size: 0.9rem;">
-                Análisis y Desarrollo de Software
-            </p>
-            <div style="margin-top: 15px; display: flex; align-items: center; gap: 8px; color: var(--text-muted); font-size: 0.85rem;">
-                <i class="ph ph-users"></i>
-                <span>35 Aprendices activos</span>
-            </div>
-        </div>
-        <div style="display: flex; gap: 10px; margin-top: 10px;">
-            <a href="{{ url_for('instructor.lista_asistencia') }}" style="flex: 1; text-align: center; background: var(--primary); color: var(--bg-main); padding: 10px; border-radius: 6px; font-weight: bold; text-decoration: none; font-size: 0.9rem;">Iniciar Sesión</a>
-            <button style="background: transparent; border: 1px solid var(--border-color); color: var(--text-white); padding: 10px; border-radius: 6px; cursor: pointer;"><i class="ph ph-eye"></i></button>
-        </div>
-    </div>
-
-    <div class="card" style="display: flex; flex-direction: column; justify-content: space-between; gap: 15px;">
-        <div>
-            <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-                <h3 style="color: var(--primary);">Ficha 2557909</h3>
-                <span class="badge badge-presente" style="font-size: 0.75rem;">ADSO</span>
-            </div>
-            <p style="color: var(--text-muted); margin-top: 10px; font-size: 0.9rem;">
-                Análisis y Desarrollo de Software (Nocturna)
-            </p>
-            <div style="margin-top: 15px; display: flex; align-items: center; gap: 8px; color: var(--text-muted); font-size: 0.85rem;">
-                <i class="ph ph-users"></i>
-                <span>32 Aprendices activos</span>
+            <div style="display: flex; gap: 10px; margin-top: 10px;">
+                <a href="{{ url_for('instructor.lista_asistencia', ficha=f.codigo) }}"
+                   style="flex: 1; text-align: center; background: var(--primary); color: var(--bg-main); padding: 10px; border-radius: 6px; font-weight: bold; text-decoration: none; font-size: 0.9rem;">
+                   Iniciar Sesión
+                </a>
+                <button style="background: transparent; border: 1px solid var(--border-color); color: var(--text-white); padding: 10px; border-radius: 6px; cursor: pointer;">
+                    <i class="ph ph-eye"></i>
+                </button>
             </div>
         </div>
-        <div style="display: flex; gap: 10px; margin-top: 10px;">
-            <button style="flex: 1; background: var(--border-color); color: var(--text-muted); padding: 10px; border-radius: 6px; font-weight: bold; border: none; cursor: not-allowed;">Sin sesión hoy</button>
-            <button style="background: transparent; border: 1px solid var(--border-color); color: var(--text-white); padding: 10px; border-radius: 6px; cursor: pointer;"><i class="ph ph-eye"></i></button>
-        </div>
-    </div>
+        {% endfor %}
+    {% else %}
+        <p style="color: var(--text-muted);">No tienes fichas asignadas por el momento.</p>
+    {% endif %}
 </div>
 {% endblock %}
