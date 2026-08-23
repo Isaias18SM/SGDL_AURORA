@@ -4,6 +4,7 @@ import io
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from decorators import solo_rol
 from database import get_db
+from werkzeug.security import generate_password_hash
 
 coordinador = Blueprint('coordinador', __name__)
 
@@ -109,12 +110,14 @@ def aprendiz_manual():
 
             id_ficha = resultado['ID_FICHA']
             id_asignacion = resultado['ID_ASIGNACION']
+            
+            Clave_encriptada = str(num_doc)
 
             cur.execute(
                 """INSERT INTO usuario
-                   (Nombre, Apellidos, No_Documento, TPI_DOCUMENTO, CORREO_SENA, ROL, Activo_SN)
-                   VALUES (%s, %s, %s, %s, %s, 'Aprendiz', '1')""",
-                (nombres, apellidos, num_doc, tipo_doc, correo)
+                   (Nombre, Apellidos, No_Documento, TPI_DOCUMENTO, CORREO_SENA, CONTRASENA, ROL, Activo_SN)
+                   VALUES (%s, %s, %s, %s, %s, %s, %s, %s)""",
+                (nombres, apellidos, num_doc, tipo_doc, correo, Clave_encriptada, 'Aprendiz', '1')
             )
             nuevo_id = cur.lastrowid
 
@@ -126,6 +129,10 @@ def aprendiz_manual():
         flash('Aprendiz registrado correctamente.', 'success')
     except Exception as e:
         conn.rollback()
+        print(f"\n[ERROR DE BASE DE DATOS]: {e}\n")
+        print("\n" + "="*50)
+        print(f"ERROR EXACTO DE LA BD: {e}")
+        print("="*50 + "\n")
         print(f"[DB ERROR] {e}")
         flash('Error al registrar el aprendiz. Verifica que el documento no esté duplicado.', 'error')
     finally:
