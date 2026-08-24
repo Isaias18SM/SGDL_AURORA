@@ -4,7 +4,6 @@ import io
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from decorators import solo_rol
 from database import get_db
-from werkzeug.security import generate_password_hash
 
 coordinador = Blueprint('coordinador', __name__)
 
@@ -52,7 +51,125 @@ def lista_coordinador():
 @coordinador.route('/reportes-coordinador')
 @solo_rol('coordinador')
 def reportes_coordinador():
-    return render_template('reportes_coordinador.html', active_page='reportes')
+    conn = get_db()
+    try:
+        with conn.cursor() as cur:
+            # 1. Instructores
+            cur.execute("""
+                SELECT Id_Usuario as id, CONCAT(Nombre, ' ', Apellidos) as nombre
+                FROM usuario 
+                WHERE ROL = 'Instructor'
+            """)
+            instructores = cur.fetchall()
+
+            # 2. Fichas asignadas a cada instructor
+            for ins in instructores:
+                cur.execute("""
+                    SELECT f.No_FICHA as codigo, p.Nombre as programa, f.Jornada as jornada
+                    FROM ficha f
+                    JOIN usuario_ficha_asignacion ufa ON ufa.ID_FICHA = f.ID_FICHA
+                    LEFT JOIN programa p ON p.Id_Programa = f.Id_Programa
+                    WHERE ufa.Id_Usuario = %s
+                """, (ins['id'],))
+                ins['fichas'] = cur.fetchall()
+
+            # 3. Fichas sin instructor asignado
+            cur.execute("""
+                SELECT f.No_FICHA as codigo, p.Nombre as programa
+                FROM ficha f
+                LEFT JOIN programa p ON p.Id_Programa = f.Id_Programa
+                WHERE f.ID_FICHA NOT IN (
+                    SELECT DISTINCT ufa.ID_FICHA 
+                    FROM usuario_ficha_asignacion ufa
+                    JOIN usuario u ON u.Id_Usuario = ufa.Id_Usuario
+                    WHERE u.ROL = 'Instructor'
+                )
+            """)
+            fichas_libres = cur.fetchall()
+    finally:
+        conn.close()
+
+    return render_template(
+        'reportes_coordinador.html',
+        active_page='reportes',
+        instructores=instructores,
+        fichas_libres=fichas_libres
+    )
+
+@coordinador.route('/coordinador/asignar-ficha', methods=['POST'])
+@solo_rol('coordinador')
+def coordinador_asignar_ficha():
+    instructor_id = request.form.get('instructor_id')
+    ficha_codigo = request.form.get('ficha_codigo')
+
+    conn = get_db()
+    try:
+        with conn.cursor() as cur:
+            # 1. Obtener ID de la ficha
+            cur.execute("SELECT ID_FICHA FROM ficha WHERE No_FICHA = %s LIMIT 1", (ficha_codigo,))
+            ficha = cur.fetchone()
+
+            # 2. Obtener un Trimestre válido/activo de la base de datos
+            cur.execute("SELECT Id_Trimestre FROM trimestre ORDER BY Id_Trimestre DESC LIMIT 1")
+            trimestre = cur.fetchone()
+
+            if not trimestre:
+                flash('No hay trimestres registrados en la base de datos.', 'error')
+                return redirect(url_for('coordinador.reportes_coordinador'))
+
+            if ficha:
+                id_ficha = ficha['ID_FICHA']
+                id_trimestre = trimestre['Id_Trimestre']
+
+                # 3. Insertar en tabla 'asignacion' cumpliendo con FK Id_Usuario e Id_Trimestre
+                cur.execute(
+                    """INSERT INTO asignacion (Id_Usuario, Id_Trimestre, HORA_INICIO, HORA_FINALIZACION) 
+                       VALUES (%s, %s, '07:00:00', '13:00:00')""",
+                    (instructor_id, id_trimestre)
+                )
+                id_asignacion = cur.lastrowid
+
+                # 4. Vincular en la tabla intermedia
+                cur.execute(
+                    """INSERT INTO usuario_ficha_asignacion (Id_Usuario, ID_FICHA, ID_ASIGNACION) 
+                       VALUES (%s, %s, %s)""",
+                    (instructor_id, id_ficha, id_asignacion)
+                )
+                conn.commit()
+                flash('Ficha asignada al instructor correctamente.', 'success')
+            else:
+                flash('La ficha seleccionada no existe.', 'error')
+    except Exception as e:
+        conn.rollback()
+        print(f"[ERROR ASIGNACION]: {e}")
+        flash('Error al asignar la ficha.', 'error')
+    finally:
+        conn.close()
+
+    return redirect(url_for('coordinador.reportes_coordinador'))
+
+
+@coordinador.route('/coordinador/desasignar-ficha', methods=['POST'])
+@solo_rol('coordinador')
+def coordinador_desasignar_ficha():
+    ficha_codigo = request.form.get('ficha_codigo')
+
+    conn = get_db()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("SELECT ID_FICHA FROM ficha WHERE No_FICHA = %s LIMIT 1", (ficha_codigo,))
+            ficha = cur.fetchone()
+            if ficha:
+                cur.execute("DELETE FROM usuario_ficha_asignacion WHERE ID_FICHA = %s", (ficha['ID_FICHA'],))
+                conn.commit()
+                flash('Asignación removida.', 'success')
+    except Exception as e:
+        conn.rollback()
+        flash('Error al desasignar la ficha.', 'error')
+    finally:
+        conn.close()
+
+    return redirect(url_for('coordinador.reportes_coordinador'))
 
 
 @coordinador.route('/novedades-coordinador')
@@ -77,6 +194,7 @@ def formulario_coordinador():
         aprendices=_obtener_aprendices()
     )
 
+
 @coordinador.route('/coordinador/aprendiz-manual', methods=['POST'])
 @solo_rol('coordinador')
 def aprendiz_manual():
@@ -94,7 +212,6 @@ def aprendiz_manual():
     conn = get_db()
     try:
         with conn.cursor() as cur:
-            # Buscar la ficha real y su asignación usando el número de ficha (No_FICHA)
             cur.execute(
                 """SELECT f.ID_FICHA, ufa.ID_ASIGNACION
                    FROM ficha f
@@ -105,7 +222,7 @@ def aprendiz_manual():
             resultado = cur.fetchone()
 
             if not resultado:
-                flash(f'La ficha {no_ficha} no existe o no tiene una asignación (instructor/horario) creada.', 'error')
+                flash(f'La ficha {no_ficha} no existe o no tiene una asignación creada.', 'error')
                 return redirect(url_for('coordinador.formulario_coordinador'))
 
             id_ficha = resultado['ID_FICHA']
@@ -129,16 +246,12 @@ def aprendiz_manual():
         flash('Aprendiz registrado correctamente.', 'success')
     except Exception as e:
         conn.rollback()
-        print(f"\n[ERROR DE BASE DE DATOS]: {e}\n")
-        print("\n" + "="*50)
-        print(f"ERROR EXACTO DE LA BD: {e}")
-        print("="*50 + "\n")
-        print(f"[DB ERROR] {e}")
         flash('Error al registrar el aprendiz. Verifica que el documento no esté duplicado.', 'error')
     finally:
         conn.close()
 
     return redirect(url_for('coordinador.formulario_coordinador'))
+
 
 @coordinador.route('/coordinador/aprendices-masivo', methods=['POST'])
 @solo_rol('coordinador')
@@ -158,7 +271,7 @@ def aprendices_masivo():
     detalle_errores = []
     try:
         with conn.cursor() as cur:
-            for i, fila in enumerate(lector, start=2):  # fila 2 = primera fila de datos (después del encabezado)
+            for i, fila in enumerate(lector, start=2):
                 try:
                     no_ficha = (fila.get('ficha') or ficha_default or '').strip()
                     if not no_ficha:
@@ -166,7 +279,6 @@ def aprendices_masivo():
                         detalle_errores.append(f"Fila {i}: sin ficha especificada.")
                         continue
 
-                    # Buscar la ficha real y su asignación usando el número de ficha (No_FICHA)
                     cur.execute(
                         """SELECT f.ID_FICHA, ufa.ID_ASIGNACION
                            FROM ficha f
@@ -199,7 +311,6 @@ def aprendices_masivo():
                     )
                     insertados += 1
                 except Exception as e:
-                    print(f"[DB ERROR fila {i}] {e}")
                     errores += 1
                     detalle_errores.append(f"Fila {i}: documento duplicado o dato inválido.")
         conn.commit()
@@ -210,7 +321,6 @@ def aprendices_masivo():
         flash(mensaje, 'success' if insertados else 'error')
     except Exception as e:
         conn.rollback()
-        print(f"[DB ERROR] {e}")
         flash('Error al procesar el archivo CSV.', 'error')
     finally:
         conn.close()

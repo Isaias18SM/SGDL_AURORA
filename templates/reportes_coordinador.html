@@ -2,46 +2,78 @@
 {% set active_page = 'reportes' %}
 
 {% block content %}
-<div style="margin-bottom: 30px;">
-    <h2>REPORTES GENERALES</h2>
-    <p style="color: var(--text-muted);">Panorama de fichas, instructores y ocupación a nivel del programa.</p>
+<div style="margin-bottom: 30px; display:flex; justify-content:space-between; align-items:flex-end; flex-wrap:wrap; gap:15px;">
+    <div>
+        <h2>INSTRUCTORES</h2>
+        <p style="color: var(--text-muted);">Gestiona los instructores del programa y asígnalos a las fichas activas.</p>
+    </div>
+    <div class="coord-stat-pill">
+        <i class="ph ph-folder-open"></i>
+        <span>{{ fichas_libres|length }} ficha(s) sin instructor asignado</span>
+    </div>
 </div>
 
 <div class="dashboard-grid">
-    <div class="card">
-        <h3>Fichas por Instructor</h3>
-        <div style="margin-top:15px; display:flex; flex-direction:column; gap:10px;">
-            {% for ins in instructores %}
-            <div class="ficha-mini-row">
+    {% for ins in instructores %}
+    <div class="card" style="display:flex; flex-direction:column; gap:15px;">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+            <div style="display:flex; gap:12px; align-items:center;">
+                <div class="user-avatar" style="width:44px; height:44px; flex-shrink:0;"></div>
                 <div>
-                    <strong>{{ ins.nombre }}</strong>
-                    <p>{{ ins.especialidad }}</p>
+                    <h3 style="color: var(--primary); font-size:1rem;">{{ ins.nombre }}</h3>
+                    <p style="color: var(--text-muted); font-size:0.8rem;">{{ ins.especialidad or 'Instructor' }}</p>
                 </div>
-                <span class="badge badge-presente">
-                    {{ fichas | selectattr('instructor_id', 'equalto', ins.id) | list | length }} ficha(s)
-                </span>
             </div>
-            {% endfor %}
+            <span class="badge badge-presente">{{ ins.fichas|length }} ficha(s)</span>
         </div>
-    </div>
 
-    <div class="card">
-        <h3>Estado de las Fichas</h3>
-        <div style="margin-top:15px; display:flex; flex-direction:column; gap:10px;">
-            {% for f in fichas %}
-            <div class="ficha-mini-row">
-                <div>
-                    <strong>Ficha {{ f.codigo }}</strong>
-                    <p>{{ f.programa }} &middot; {{ f.jornada }}</p>
+        <div>
+            {% if ins.fichas %}
+            <p style="font-size:0.78rem; color:var(--text-muted); margin-bottom:8px; font-weight:600;">FICHAS ASIGNADAS</p>
+            <div style="display:flex; flex-direction:column; gap:8px;">
+                {% for f in ins.fichas %}
+                <div class="ficha-mini-row">
+                    <div>
+                        <strong>Ficha {{ f.codigo }}</strong>
+                        <p>{{ f.programa }} &middot; {{ f.jornada }}</p>
+                    </div>
+                    <form method="POST" action="{{ url_for('coordinador.coordinador_desasignar_ficha') }}">
+                        <input type="hidden" name="ficha_codigo" value="{{ f.codigo }}">
+                        <button type="submit" class="btn-icon-danger" title="Quitar asignación">
+                            <i class="ph ph-x"></i>
+                        </button>
+                    </form>
                 </div>
-                {% if f.instructor_id %}
-                <span class="badge badge-presente">Asignada</span>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p style="font-size:0.85rem; color:var(--text-muted);">Sin fichas asignadas todavía.</p>
+            {% endif %}
+        </div>
+
+        <details class="assign-panel">
+            <summary class="btn-outline-fichas" style="width:100%; justify-content:center;">
+                <i class="ph ph-plus-circle"></i> Asignar a ficha
+            </summary>
+            <div style="margin-top:12px;">
+                {% if fichas_libres %}
+                <form method="POST" action="{{ url_for('coordinador.coordinador_asignar_ficha') }}" style="display:flex; gap:8px;">
+                    <input type="hidden" name="instructor_id" value="{{ ins.id }}">
+                    <select name="ficha_codigo" class="form-input" required style="flex:1;">
+                        {% for f in fichas_libres %}
+                        <option value="{{ f.codigo }}">Ficha {{ f.codigo }} — {{ f.programa }}</option>
+                        {% endfor %}
+                    </select>
+                    <button type="submit" class="btn-primary-sm">Asignar</button>
+                </form>
                 {% else %}
-                <span class="badge badge-falla">Sin instructor</span>
+                <p style="font-size:0.85rem; color:var(--text-muted);">No hay fichas disponibles para asignar en este momento.</p>
                 {% endif %}
             </div>
-            {% endfor %}
-        </div>
+        </details>
     </div>
+    {% else %}
+    <p style="color:var(--text-muted);">No hay instructores registrados.</p>
+    {% endfor %}
 </div>
 {% endblock %}

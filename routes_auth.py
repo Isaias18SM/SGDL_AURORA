@@ -41,7 +41,7 @@ def dashboard_segun_rol():
 
     elif rol == 'instructor':
         return redirect(
-            url_for('Instructor.dashboard_instructor')
+            url_for('instructor.dashboard')
         )
 
     elif rol == 'coordinador':

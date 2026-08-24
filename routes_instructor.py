@@ -2,7 +2,10 @@ from datetime import datetime
 from flask import Blueprint, render_template, request, session
 from decorators import solo_rol, login_requerido
 from database import obtener_fichas, obtener_aprendices_por_ficha, actualizar_perfil_usuario
+
 instructor_bp = Blueprint('instructor', __name__)
+
+ESTADOS_VALIDOS = ['Presente', 'Falla', 'Retardo', 'Excusa']
 
 
 @instructor_bp.route('/dashboard')
@@ -44,7 +47,8 @@ def lista_asistencia():
         aprendices=aprendices,
         fichas=fichas,
         ficha_seleccionada=ficha_seleccionada,
-        fecha=fecha
+        fecha=fecha,
+        estados_validos=ESTADOS_VALIDOS
     )
 
 
@@ -65,6 +69,7 @@ def novedades():
 def historial():
     return render_template('historial.html', active_page='historial')
 
+
 @instructor_bp.route('/configuracion', methods=['GET', 'POST'])
 @login_requerido
 def configuracion():
@@ -78,7 +83,6 @@ def configuracion():
         else:
             resultado = actualizar_perfil_usuario(session.get('id'), nombre, email)
             if resultado['ok']:
-                # Refleja el cambio también en la sesión activa
                 session['nombre'] = nombre
                 session['correo'] = email
                 mensaje = ('exito', resultado['message'])

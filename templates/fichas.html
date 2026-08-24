@@ -30,14 +30,12 @@
                 Iniciar Sesión
             </a>
             {% else %}
-            <button disabled style="flex: 1; background: var(--border-color); color: var(--text-muted); padding: 10px; border-radius: 6px; font-weight: bold; border: none; cursor: not-allowed;">
-                Sin sesión hoy
-            </button>
+           
             {% endif %}
-            <button type="button" class="btn-ver-ficha" data-codigo="{{ f.codigo }}"
-                    style="background: transparent; border: 1px solid var(--border-color); color: var(--text-white); padding: 10px; border-radius: 6px; cursor: pointer;">
-                <i class="ph ph-eye"></i>
-            </button>
+          <button type="button" class="btn-ver-ficha" data-codigo="{{ f.codigo }}"
+        style="width: 100%; background: var(--primary); color: #ffffff; border: none; padding: 10px 16px; border-radius: 6px; font-weight: bold; font-size: 0.9rem; cursor: pointer; transition: background 0.2s ease;">
+  Ver Ficha
+</button>
         </div>
     </div>
     {% else %}
