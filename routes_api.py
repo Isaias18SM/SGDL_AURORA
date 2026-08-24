@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, session
 from database import get_db
 from decorators import solo_rol_api, login_requerido
 
@@ -97,3 +97,96 @@ def api_fichas():
 @login_requerido
 def api_cambiar_estado():
     return jsonify({"status": "success", "message": "Estado actualizado correctamente"})
+
+
+@api_bp.route('/api/registrar-entrada', methods=['POST'])
+@solo_rol_api('aprendiz')
+def api_registrar_entrada():
+    id_usuario = session.get('id')
+    data = request.get_json(silent=True) or {}
+    tipo = (data.get('tipo') or '').strip().upper()
+
+    if tipo not in ('ENTRADA', 'SALIDA'):
+        return jsonify({"status": "error", "message": "Tipo de registro inválido."}), 400
+
+    conn = None
+    try:
+        conn = get_db()
+        with conn.cursor() as cur:
+            cur.execute("CALL sp_registrar_asistencia(%s, %s)", (id_usuario, tipo))
+            resultado = cur.fetchone()
+        conn.commit()
+    except Exception as e:
+        print(f"[DB ERROR] {e}")
+        return jsonify({"status": "error", "message": "Error al consultar la base de datos."}), 500
+    finally:
+        if conn:
+            conn.close()
+
+    estado = resultado.get('estado') if resultado else None
+
+    if estado == 'OK_ENTRADA':
+        return jsonify({"status": "success", "message": "Entrada registrada exitosamente", "hora": str(resultado.get('hora'))})
+
+    if estado == 'OK_SALIDA':
+        return jsonify({"status": "success", "message": "Salida registrada exitosamente", "hora": str(resultado.get('hora'))})
+
+    if estado == 'DUPLICADO_ENTRADA':
+        return jsonify({"status": "duplicado", "message": "Ya registraste tu entrada el día de hoy."}), 409
+
+    if estado == 'DUPLICADO_SALIDA':
+        return jsonify({"status": "duplicado", "message": "Ya registraste tu salida el día de hoy."}), 409
+
+    if estado == 'SIN_ENTRADA':
+        return jsonify({"status": "error", "message": "Debes registrar tu entrada antes de registrar la salida."}), 409
+
+    return jsonify({"status": "error", "message": "No se pudo procesar el registro."}), 500
+
+
+@api_bp.route('/api/marcar-qr', methods=['POST'])
+def api_marcar_qr():
+    data = request.get_json(silent=True) or {}
+    token = (data.get('token') or '').strip()
+    tipo = (data.get('tipo') or '').strip().upper()
+
+    if not token:
+        return jsonify({"status": "error", "message": "Código QR inválido."}), 400
+    if tipo not in ('ENTRADA', 'SALIDA'):
+        return jsonify({"status": "error", "message": "Tipo de registro inválido."}), 400
+
+    conn = None
+    try:
+        conn = get_db()
+        with conn.cursor() as cur:
+            cur.execute("CALL sp_registrar_asistencia_qr(%s, %s)", (token, tipo))
+            resultado = cur.fetchone()
+        conn.commit()
+    except Exception as e:
+        print(f"[DB ERROR] {e}")
+        return jsonify({"status": "error", "message": "Error al consultar la base de datos."}), 500
+    finally:
+        if conn:
+            conn.close()
+
+    estado = resultado.get('estado') if resultado else None
+    nombre = resultado.get('nombre') if resultado else None
+
+    if estado == 'TOKEN_INVALIDO':
+        return jsonify({"status": "error", "message": "Código QR no reconocido."}), 404
+
+    if estado == 'OK_ENTRADA':
+        return jsonify({"status": "success", "message": f"Entrada registrada: {nombre}", "hora": str(resultado.get('hora'))})
+
+    if estado == 'OK_SALIDA':
+        return jsonify({"status": "success", "message": f"Salida registrada: {nombre}", "hora": str(resultado.get('hora'))})
+
+    if estado == 'DUPLICADO_ENTRADA':
+        return jsonify({"status": "duplicado", "message": f"{nombre} ya registró entrada hoy."}), 409
+
+    if estado == 'DUPLICADO_SALIDA':
+        return jsonify({"status": "duplicado", "message": f"{nombre} ya registró salida hoy."}), 409
+
+    if estado == 'SIN_ENTRADA':
+        return jsonify({"status": "error", "message": f"{nombre} debe registrar entrada primero."}), 409
+
+    return jsonify({"status": "error", "message": "No se pudo procesar el registro."}), 500

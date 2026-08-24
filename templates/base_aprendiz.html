@@ -23,6 +23,9 @@
                 <li class="nav-item {% if active_page == 'novedades' %}active{% endif %}">
                     <a href="{{ url_for('aprendiz.novedades_aprendiz') }}"><i class="ph ph-paperclip"></i> Justificar Novedad</a>
                 </li>
+                <li class="nav-item {% if active_page == 'mi_qr' %}active{% endif %}">
+                    <a href="{{ url_for('aprendiz.mi_qr') }}"><i class="ph ph-qr-code"></i> Mi Código QR</a>
+                </li>
             </ul>
 
             <!-- Cerrar sesión al fondo -->
