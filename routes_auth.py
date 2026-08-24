@@ -31,16 +31,29 @@ def login():
 @auth_bp.route('/ir-dashboard')
 @login_requerido
 def dashboard_segun_rol():
-    rol = session.get('rol')
+
+    rol = session.get('rol', '').lower().strip()
 
     if rol == 'aprendiz':
-        return redirect(url_for('aprendiz.dashboard_aprendiz'))
-    elif rol in ('instructor', 'coordinador'):
-        return redirect(url_for('instructor.dashboard'))
+        return redirect(
+            url_for('aprendiz.dashboard_aprendiz')
+        )
+
+    elif rol == 'instructor':
+        return redirect(
+            url_for('Instructor.dashboard_instructor')
+        )
+
+    elif rol == 'coordinador':
+        return redirect(
+            url_for('coordinador.lista_coordinador')
+        )
+
     else:
-        # Rol desconocido/corrupto: no reintentar el loop, cerrar sesión
         session.clear()
-        return redirect(url_for('auth.login'))
+        return redirect(
+            url_for('auth.login')
+        )
 
 
 @auth_bp.route('/logout')
