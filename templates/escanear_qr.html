@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Escanear Asistencia - SENA Connect</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+  body { 
+    font-family: system-ui, -apple-system, sans-serif; 
+    background: #ffffff; 
+    color: #2d3748; 
+    text-align: center; 
+    padding: 20px; 
+    margin: 0; 
+  }
+  
+  .container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 85vh;
+    max-width: 600px;
+    margin: 0 auto;
+  }
+
+  h2 { 
+    margin-top: 0; 
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: #2d3748;
+    letter-spacing: -0.5px;
+  }
+
+  p {
+    color: #718096;
+    font-size: 1rem;
+    margin-bottom: 25px;
+  }
+
+  .button-group {
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+    margin-bottom: 20px;
+  }
+
+  /* Botón por defecto (Inactivo / Estilo Salida) */
+  .modo-btn { 
+    padding: 12px 32px; 
+    border-radius: 6px; 
+    border: 1px solid #c2ebd0; 
+    background: #e6f7ed; 
+    color: #00b44b; 
+    font-weight: 600; 
+    cursor: pointer; 
+    font-size: 1rem; 
+    transition: all 0.2s ease;
+  }
+
+  .modo-btn.activo { 
+    background-color: #00b44b; 
+    color: #ffffff; 
+    border: 1px solid #00b44b;
+    box-shadow: 0 2px 6px rgba(0,180,75,0.2);
+  }
+
+  #reader { 
+    width: 320px; 
+    margin: 20px auto; 
+    border-radius: 12px; 
+    overflow: hidden; 
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    background: #1a202c;
+  }
+
+  #mensaje { 
+    margin-top: 20px; 
+    font-size: 1.1rem; 
+    min-height: 30px; 
+    font-weight: 600; 
+  }
+</style>
+</head>
+<body>
+
+  <div class="container">
+    <h2>Punto de Control de Asistencia</h2>
+    <p>Selecciona qué vas a registrar y luego escanea tu código QR</p>
+
+    <div class="button-group">
+      <button class="modo-btn activo" id="btnModoEntrada">Entrada</button>
+      <button class="modo-btn" id="btnModoSalida">Salida</button>
+    </div>
+
+    <div id="reader"></div>
+    <div id="mensaje"></div>
+  </div>
+
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+  <script>
+    let tipoActual = 'ENTRADA';
+    let procesando = false;
+
+    document.getElementById('btnModoEntrada').addEventListener('click', function () {
+        tipoActual = 'ENTRADA';
+        this.classList.add('activo');
+        document.getElementById('btnModoSalida').classList.remove('activo');
+    });
+    document.getElementById('btnModoSalida').addEventListener('click', function () {
+        tipoActual = 'SALIDA';
+        this.classList.add('activo');
+        document.getElementById('btnModoEntrada').classList.remove('activo');
+    });
+
+    const mensaje = document.getElementById('mensaje');
+
+    function onScanSuccess(token) {
+        if (procesando) return;
+        procesando = true;
+        mensaje.textContent = 'Procesando...';
+        mensaje.style.color = '#718096';
+
+        fetch('/api/marcar-qr', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token: token, tipo: tipoActual })
+        })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+            mensaje.textContent = data.message;
+            mensaje.style.color = data.status === 'success' ? '#00b44b' : (data.status === 'duplicado' ? '#f59e0b' : '#ef4444');
+        })
+        .catch(function () {
+            mensaje.textContent = 'No se pudo conectar con el servidor.';
+            mensaje.style.color = '#ef4444';
+        })
+        .finally(function () {
+            setTimeout(function () { procesando = false; mensaje.textContent = ''; }, 3000);
+        });
+    }
+
+    const scanner = new Html5Qrcode("reader");
+    scanner.start(
+        { facingMode: "environment" },
+        { fps: 10, qrbox: 220 },
+        function (decodedText) { onScanSuccess(decodedText); },
+        function (errorMessage) { /* ignorar frames sin QR */ }
+    );
+  </script>
+</body>
+</html>

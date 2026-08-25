@@ -1,8 +1,11 @@
 from datetime import datetime
 from flask import Blueprint, render_template, request, session
 from app.utils.decorators import solo_rol, login_requerido
+from app.database import obtener_fichas, obtener_aprendices_por_ficha, actualizar_perfil_usuario 
 
 instructor_bp = Blueprint('instructor', __name__)
+
+
 
 @instructor_bp.route('/dashboard')
 @solo_rol('instructor', 'coordinador')
@@ -16,46 +19,48 @@ def dashboard():
         saludo = "Buenas noches"
 
     dias = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"]
-    meses = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"]
+    meses = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto",
+             "septiembre", "octubre", "noviembre", "diciembre"]
     ahora = datetime.now()
     fecha_hoy = f"{dias[ahora.weekday()]}, {ahora.day} de {meses[ahora.month - 1]} de {ahora.year}"
 
     return render_template('dashboard.html', active_page='dashboard', saludo=saludo, fecha_hoy=fecha_hoy)
 
-@instructor_bp.route('/fichas')
-@solo_rol('instructor', 'coordinador')
-def fichas():
-    return render_template('fichas.html', active_page='fichas')
 
 @instructor_bp.route('/lista-asistencia', methods=['GET', 'POST'])
 @solo_rol('instructor', 'coordinador')
 def lista_asistencia():
-    aprendices_mock = [
-        {"id": 1, "nombre": "Ana Gomez", "documento": "2250597075", "perfil": "Aprendiz", "estado": "Presente", "ficha": "2557908"},
-        {"id": 2, "nombre": "Luis Rodriguez", "documento": "224204312", "perfil": "Aprendiz", "estado": "Falla", "ficha": "2557908"},
-        {"id": 3, "nombre": "María Turranez", "documento": "25502511106", "perfil": "Aprendiz", "estado": "Excusa", "ficha": "2557908"},
-        {"id": 4, "nombre": "Carlos Mendoza", "documento": "224204313", "perfil": "Aprendiz", "estado": "Retardo", "ficha": "2557909"},
-        {"id": 5, "nombre": "Laura Pérez", "documento": "255027512", "perfil": "Aprendiz", "estado": "Presente", "ficha": "2557909"},
-    ]
+    fichas = obtener_fichas()
 
     ficha_seleccionada = request.args.get('ficha', '').strip()
-    if ficha_seleccionada:
-        aprendices = [a for a in aprendices_mock if a['ficha'] == ficha_seleccionada]
-    else:
-        aprendices = aprendices_mock
-        ficha_seleccionada = aprendices_mock[0]['ficha'] if aprendices_mock else None
+    if not ficha_seleccionada and fichas:
+        ficha_seleccionada = fichas[0]['No_FICHA']
 
-    return render_template('lista.html', active_page='lista', aprendices=aprendices, ficha_seleccionada=ficha_seleccionada)
+    fecha = request.args.get('fecha') or datetime.now().strftime('%Y-%m-%d')
+
+    aprendices = obtener_aprendices_por_ficha(ficha_seleccionada, fecha) if ficha_seleccionada else []
+
+    return render_template(
+        'lista.html',
+        active_page='lista',
+        aprendices=aprendices,
+        fichas=fichas,
+        ficha_seleccionada=ficha_seleccionada,
+        fecha=fecha
+    )
+
 
 @instructor_bp.route('/reportes')
 @solo_rol('instructor', 'coordinador')
 def modulos():
     return render_template('modulos.html', active_page='reportes')
 
+
 @instructor_bp.route('/novedades')
 @solo_rol('instructor', 'coordinador')
 def novedades():
     return render_template('novedades.html', active_page='novedades')
+
 
 @instructor_bp.route('/historial')
 @solo_rol('instructor', 'coordinador')
@@ -65,9 +70,26 @@ def historial():
 @instructor_bp.route('/configuracion', methods=['GET', 'POST'])
 @login_requerido
 def configuracion():
+    mensaje = None
+    if request.method == 'POST':
+        nombre = request.form.get('nombre', '').strip()
+        email = request.form.get('email', '').strip()
+
+        if not nombre or not email or '@' not in email:
+            mensaje = ('error', 'Verifica que el nombre y el correo sean válidos.')
+        else:
+            resultado = actualizar_perfil_usuario(session.get('id'), nombre, email)
+            if resultado['ok']:
+                # Refleja el cambio también en la sesión activa
+                session['nombre'] = nombre
+                session['correo'] = email
+                mensaje = ('exito', resultado['message'])
+            else:
+                mensaje = ('error', resultado['message'])
+
     user_info = {
         "nombre": session.get('nombre', 'Usuario'),
         "email": session.get('correo', ''),
         "rol": session.get('rol', '')
     }
-    return render_template('configuracion.html', active_page='config', user=user_info)
+    return render_template('configuracion.html', active_page='config', user=user_info, mensaje=mensaje)
