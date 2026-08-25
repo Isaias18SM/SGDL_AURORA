@@ -4,35 +4,56 @@
 {% block content %}
 <div style="margin-bottom: 30px;">
     <h2>MIS ASISTENCIAS</h2>
-    <p style="color: var(--text-muted);">Consulta tu historial diario de asistencia detallado por competencia y estado.</p>
+    <p style="color: var(--text-muted);">Consulta tu historial diario de asistencia y tu porcentaje acumulado.</p>
 </div>
 
-<div class="card" style="display: flex; gap: 20px; align-items: center; padding: 15px 24px;">
+{% if resumen.en_riesgo %}
+<div class="card" style="background: rgba(220,38,38,0.12); border: 1px solid var(--danger); margin-bottom: 20px; display: flex; align-items: center; gap: 12px;">
+    <i class="ph ph-warning" style="color: var(--danger); font-size: 1.4rem;"></i>
+    <div>
+        <strong style="color: var(--danger);">Alerta de riesgo academico</strong>
+        <p style="color: var(--text-muted); font-size: 0.85rem; margin-top: 4px;">
+            Tu porcentaje de asistencia ({{ resumen.porcentaje }}%) esta por debajo del umbral minimo ({{ resumen.umbral }}%).
+            Esto representa riesgo de perdida del proceso formativo por inasistencia excesiva.
+        </p>
+    </div>
+</div>
+{% endif %}
+
+<div class="card" style="display: flex; gap: 30px; align-items: center; padding: 20px 24px; margin-bottom: 20px;">
+    <div style="text-align: center;">
+        <span style="font-size: 2rem; font-weight: bold; color: {% if resumen.en_riesgo %}var(--danger){% else %}var(--primary){% endif %};">{{ resumen.porcentaje }}%</span>
+        <p style="color: var(--text-muted); font-size: 0.8rem;">Asistencia acumulada</p>
+    </div>
+    <div style="display: flex; gap: 20px; font-size: 0.85rem;">
+        <span><i class="ph ph-circle-fill" style="color: var(--primary);"></i> {{ resumen.presentes }} Presente(s)</span>
+        <span><i class="ph ph-circle-fill" style="color: var(--danger);"></i> {{ resumen.fallas }} Falla(s)</span>
+        <span><i class="ph ph-circle-fill" style="color: var(--warning);"></i> {{ resumen.excusas }} Excusa(s)</span>
+        <span><i class="ph ph-circle-fill" style="color: var(--info);"></i> {{ resumen.retardos }} Retardo(s)</span>
+    </div>
+</div>
+
+<form method="GET" action="{{ url_for('aprendiz.asistencia_aprendiz') }}" class="card" style="display: flex; gap: 20px; align-items: center; padding: 15px 24px;">
     <div style="flex: 1;">
         <label style="display: block; font-size: 0.8rem; color: var(--text-muted); margin-bottom: 5px;">Filtrar por Fecha</label>
-        <input type="date" value="2026-03-13" style="width: 100%; background: var(--bg-main); border: 1px solid var(--border-color); padding: 10px; border-radius: 6px; color: var(--text-white);">
+        <input type="date" name="fecha" value="{{ fecha_filtro }}" onchange="this.form.submit()" style="width: 100%; background: var(--bg-main); border: 1px solid var(--border-color); padding: 10px; border-radius: 6px; color: var(--text-white);">
     </div>
     <div style="flex: 1;">
         <label style="display: block; font-size: 0.8rem; color: var(--text-muted); margin-bottom: 5px;">Estado</label>
-        <select style="width: 100%; background: var(--bg-main); border: 1px solid var(--border-color); padding: 10px; border-radius: 6px; color: var(--text-white);">
-            <option>Todos los Estados</option>
-            <option>Presente</option>
-            <option>Falla</option>
-            <option>Excusa</option>
-            <option>Retardo</option>
+        <select name="estado" onchange="this.form.submit()" style="width: 100%; background: var(--bg-main); border: 1px solid var(--border-color); padding: 10px; border-radius: 6px; color: var(--text-white);">
+            {% for opcion in ['Todos los Estados', 'Presente', 'Falla', 'Excusa', 'Retardo'] %}
+            <option value="{{ opcion }}" {% if estado_filtro == opcion %}selected{% endif %}>{{ opcion }}</option>
+            {% endfor %}
         </select>
     </div>
-    <div style="flex: 2;">
-        <label style="display: block; font-size: 0.8rem; color: var(--text-muted); margin-bottom: 5px;">Competencia</label>
-        <select style="width: 100%; background: var(--bg-main); border: 1px solid var(--border-color); padding: 10px; border-radius: 6px; color: var(--text-white);">
-            <option>Desarrollo de componentes de software de acuerdo con las especificaciones</option>
-        </select>
-    </div>
-</div>
+    {% if fecha_filtro or (estado_filtro and estado_filtro != 'Todos los Estados') %}
+    <a href="{{ url_for('aprendiz.asistencia_aprendiz') }}" style="color: var(--text-muted); font-size: 0.85rem; white-space: nowrap;">Limpiar filtros</a>
+    {% endif %}
+</form>
 
 <div class="card">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-        <h3>Mi Historial de Asistencia Personal (Ficha 2557908 - ADSO)</h3>
+        <h3>Mi Historial de Asistencia Personal</h3>
         <div style="display: flex; gap: 10px; font-size: 0.8rem;">
             <span><i class="ph ph-circle-fill" style="color: var(--primary);"></i> Presente</span>
             <span><i class="ph ph-circle-fill" style="color: var(--danger);"></i> Falla</span>
@@ -46,41 +67,35 @@
             <tr>
                 <th>Fecha</th>
                 <th>Nombre</th>
-                <th>Documento</th>
-                <th>Perfil</th>
                 <th>Estado</th>
-                <th>Novedades</th>
-                <th>Acciones</th>
             </tr>
         </thead>
         <tbody>
+            {% for registro in historial %}
             <tr>
-                <td>13/03/2026</td>
-                <td>Ana Gomez</td>
-                <td>2250597075</td>
-                <td>Aprendiz</td>
-                <td><span class="badge badge-presente">Presente</span></td>
-                <td>-</td>
-                <td><button style="background:transparent; border:none; color:var(--text-muted); cursor:pointer;"><i class="ph ph-eye"></i> Detalle</button></td>
+                <td>{{ registro.Fecha_Requerida.strftime('%d/%m/%Y') if registro.Fecha_Requerida else '-' }}</td>
+                <td>{{ session.get('nombre', '-') }}</td>
+                <td>
+                    {% if registro.Estado == 'Presente' %}
+                        <span class="badge badge-presente">Presente</span>
+                    {% elif registro.Estado == 'Falla' %}
+                        <span class="badge" style="background: rgba(220,38,38,0.15); color: var(--danger);">Falla</span>
+                    {% elif registro.Estado == 'Excusa' %}
+                        <span class="badge badge-excusa">Excusa</span>
+                    {% elif registro.Estado == 'Retardo' %}
+                        <span class="badge" style="background: rgba(59,130,246,0.15); color: var(--info);">Retardo</span>
+                    {% else %}
+                        <span class="badge">{{ registro.Estado }}</span>
+                    {% endif %}
+                </td>
             </tr>
+            {% else %}
             <tr>
-                <td>12/03/2026</td>
-                <td>Ana Gomez</td>
-                <td>2250597075</td>
-                <td>Aprendiz</td>
-                <td><span class="badge badge-excusa">Excusa</span></td>
-                <td><i class="ph ph-file-text" style="color: var(--warning);"></i> Médica</td>
-                <td><button style="background:transparent; border:none; color:var(--text-muted); cursor:pointer;"><i class="ph ph-eye"></i> Detalle</button></td>
+                <td colspan="3" style="text-align: center; color: var(--text-muted); padding: 20px;">
+                    No hay registros de asistencia para los filtros seleccionados.
+                </td>
             </tr>
-            <tr>
-                <td>11/03/2026</td>
-                <td>Ana Gomez</td>
-                <td>2250597075</td>
-                <td>Aprendiz</td>
-                <td><span class="badge badge-presente">Presente</span></td>
-                <td>-</td>
-                <td><button style="background:transparent; border:none; color:var(--text-muted); cursor:pointer;"><i class="ph ph-eye"></i> Detalle</button></td>
-            </tr>
+            {% endfor %}
         </tbody>
     </table>
 </div>

@@ -1,18 +1,32 @@
-from flask import Blueprint, render_template, session
+from flask import Blueprint, render_template, session, request
 from decorators import solo_rol
-from database import get_db
+from database import get_db, obtener_historial_asistencia, calcular_resumen_asistencia
 
 aprendiz_bp = Blueprint('aprendiz', __name__)
 
 @aprendiz_bp.route('/aprendiz/dashboard')
 @solo_rol('aprendiz')
 def dashboard_aprendiz():
-    return render_template('dashboard_aprendiz.html', active_page='dashboard')
+    resumen = calcular_resumen_asistencia(session['id'])
+    return render_template('dashboard_aprendiz.html', active_page='dashboard', resumen=resumen)
 
 @aprendiz_bp.route('/aprendiz/asistencia')
 @solo_rol('aprendiz')
 def asistencia_aprendiz():
-    return render_template('asistencia_aprendiz.html', active_page='mis_asistencias')
+    fecha_filtro = request.args.get('fecha') or None
+    estado_filtro = request.args.get('estado') or None
+
+    historial = obtener_historial_asistencia(session['id'], fecha_filtro, estado_filtro)
+    resumen = calcular_resumen_asistencia(session['id'])
+
+    return render_template(
+        'asistencia_aprendiz.html',
+        active_page='mis_asistencias',
+        historial=historial,
+        resumen=resumen,
+        fecha_filtro=fecha_filtro or '',
+        estado_filtro=estado_filtro or 'Todos los Estados'
+    )
 
 @aprendiz_bp.route('/aprendiz/novedades')
 @solo_rol('aprendiz')
