@@ -1,6 +1,13 @@
 import os
-from flask import Blueprint, render_template, session, request
+from io import BytesIO
+from datetime import datetime
+from flask import Blueprint, render_template, session, request, send_file
 from werkzeug.utils import secure_filename
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import letter
+from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.lib.units import cm
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
 from decorators import solo_rol
 from database import (
     get_db,
@@ -36,6 +43,62 @@ def _es_pdf_valido(archivo):
     archivo.stream.seek(0)  # devolvemos el puntero al inicio para poder guardar el archivo despues
     return inicio == b'%PDF-'
 
+def _generar_pdf_historial(nombre_aprendiz, historial, resumen, fecha_filtro, estado_filtro):
+    """APR-008: arma el PDF con el historial de asistencia del aprendiz (criterio #1).
+    Recibe la lista ya filtrada (historial) para que el PDF respete los mismos
+    filtros de fecha/estado que el aprendiz tiene aplicados en pantalla."""
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(
+        buffer, pagesize=letter,
+        topMargin=2 * cm, bottomMargin=2 * cm, leftMargin=2 * cm, rightMargin=2 * cm
+    )
+    estilos = getSampleStyleSheet()
+    elementos = []
+
+    elementos.append(Paragraph("Reporte de Asistencia - SGDL Aurora", estilos['Title']))
+    elementos.append(Spacer(1, 12))
+    elementos.append(Paragraph(f"Aprendiz: {nombre_aprendiz}", estilos['Normal']))
+    elementos.append(Paragraph(f"Generado el: {datetime.now().strftime('%d/%m/%Y %H:%M')}", estilos['Normal']))
+
+    filtros_texto = []
+    if fecha_filtro:
+        filtros_texto.append(f"Fecha: {fecha_filtro}")
+    if estado_filtro and estado_filtro != 'Todos los Estados':
+        filtros_texto.append(f"Estado: {estado_filtro}")
+    if filtros_texto:
+        elementos.append(Paragraph("Filtros aplicados: " + ", ".join(filtros_texto), estilos['Normal']))
+
+    elementos.append(Spacer(1, 6))
+    elementos.append(Paragraph(
+        f"Resumen: {resumen['presentes']} presente(s), {resumen['fallas']} falla(s), "
+        f"{resumen['excusas']} excusa(s), {resumen['retardos']} retardo(s) "
+        f"&mdash; {resumen['porcentaje']}% de asistencia acumulada.",
+        estilos['Normal']
+    ))
+    elementos.append(Spacer(1, 16))
+
+    datos_tabla = [["Fecha", "Estado"]]
+    for registro in historial:
+        fecha = registro['Fecha_Requerida'].strftime('%d/%m/%Y') if registro.get('Fecha_Requerida') else '-'
+        datos_tabla.append([fecha, registro.get('Estado', '-')])
+
+    tabla = Table(datos_tabla, colWidths=[8 * cm, 8 * cm])
+    tabla.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#16A34A')),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#F3F4F6')]),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('TOPPADDING', (0, 0), (-1, -1), 6),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+    ]))
+    elementos.append(tabla)
+
+    doc.build(elementos)
+    buffer.seek(0)
+    return buffer
 
 @aprendiz_bp.context_processor
 def inyectar_notificaciones():
@@ -60,9 +123,28 @@ def dashboard_aprendiz():
 def asistencia_aprendiz():
     fecha_filtro = request.args.get('fecha') or None
     estado_filtro = request.args.get('estado') or None
+    descargar = request.args.get('descargar') == '1'
 
     historial = obtener_historial_asistencia(session['id'], fecha_filtro, estado_filtro)
     resumen = calcular_resumen_asistencia(session['id'])
+    mensaje = None
+
+    if descargar:
+        if not historial:
+            # APR-008 #2: sin registros para el periodo solicitado, no se genera el PDF.
+            mensaje = ('error', 'No hay registros de asistencia disponibles para el período solicitado.')
+        else:
+            # APR-008 #1: genera y descarga el PDF con el historial filtrado.
+            pdf_buffer = _generar_pdf_historial(
+                session.get('nombre', ''), historial, resumen, fecha_filtro, estado_filtro
+            )
+            nombre_archivo = f"asistencia_{session['id']}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
+            return send_file(
+                pdf_buffer,
+                mimetype='application/pdf',
+                as_attachment=True,
+                download_name=nombre_archivo
+            )
 
     return render_template(
         'asistencia_aprendiz.html',
@@ -70,7 +152,8 @@ def asistencia_aprendiz():
         historial=historial,
         resumen=resumen,
         fecha_filtro=fecha_filtro or '',
-        estado_filtro=estado_filtro or 'Todos los Estados'
+        estado_filtro=estado_filtro or 'Todos los Estados',
+        mensaje=mensaje
     )
 
 @aprendiz_bp.route('/aprendiz/novedades', methods=['GET', 'POST'])

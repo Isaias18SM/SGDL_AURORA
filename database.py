@@ -231,7 +231,6 @@ def actualizar_perfil_usuario(id_usuario, nombre_completo, correo):
         return {"ok": False, "message": "Ocurrió un error al guardar en la base de datos."}
     finally:
         if conn:
-            
             conn.close()
 
 
@@ -586,5 +585,4 @@ def guardar_soporte_falla(id_usuario, fecha_requerida, ruta_archivo):
         return {"ok": False, "message": "Ocurrio un error al guardar el soporte."}
     finally:
         if conn:
-
             conn.close()
