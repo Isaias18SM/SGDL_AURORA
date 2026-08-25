@@ -41,6 +41,16 @@ def _obtener_aprendices():
             ]
     finally:
         conn.close()
+        
+def _obtener_programas():
+    conn = get_db()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("SELECT Id_Programa AS id, Nombre AS nombre FROM programa")
+            datos = cur.fetchall()
+            return datos
+    finally:
+        conn.close()
 
 
 @coordinador.route('/lista-coordinador')
@@ -76,6 +86,17 @@ def formulario_coordinador():
         fichas=_obtener_fichas(),
         aprendices=_obtener_aprendices()
     )
+    
+@coordinador.route('/formulario-ficha')
+@solo_rol('coordinador')
+def formulario_ficha():
+    datos_programas = _obtener_programas
+    return render_template(
+        'Formulario_New_Ficha.html',
+        active_page='formulario_ficha',
+        programas=datos_programas()
+    )
+    
 
 @coordinador.route('/coordinador/aprendiz-manual', methods=['POST'])
 @solo_rol('coordinador')
@@ -139,6 +160,52 @@ def aprendiz_manual():
         conn.close()
 
     return redirect(url_for('coordinador.formulario_coordinador'))
+
+
+@coordinador.route('/coordinador/ficha-manual', methods=['POST'])
+@solo_rol('coordinador')
+def ficha_manual():
+    NumeroFicha = request.form.get('NumeroFicha', '').strip()
+    Jornada = request.form.get('Jornada', '').strip()
+    TipoFicha = request.form.get('TipoFicha', '').strip()
+    Vigencia = request.form.get('Vigencia', '').strip()
+    FechaInicio = request.form.get('FechaInicio', '').strip()
+    FechaFinal = request.form.get('FechaFinal', '').strip()
+    Programa = request.form.get('Programa')
+
+    if not (NumeroFicha and Jornada and TipoFicha and Vigencia and FechaInicio and FechaFinal and Programa):
+        flash('Completa todos los campos obligatorios.', 'error')
+        return redirect(url_for('coordinador.formulario_ficha'))
+
+    conn = get_db()
+    try:
+        with conn.cursor() as cur:
+
+            cur.execute(
+                """INSERT INTO ficha
+                   (No_FICHA, Jornada, TipoDeFicha, Vigencia, FechaInicio, FechaFinal, Id_Programa)
+                   VALUES (%s, %s, %s, %s, %s, %s, %s)""",
+                (NumeroFicha, Jornada, TipoFicha, Vigencia, FechaInicio, FechaFinal, Programa)
+            )
+
+
+
+        conn.commit()
+        flash(f'Ficha {NumeroFicha} registrada correctamente.', 'success')
+        
+    except Exception as e:
+        conn.rollback()
+        print(f"\n[ERROR DE BASE DE DATOS]: {e}\n")
+        print("\n" + "="*50)
+        print(f"ERROR EXACTO DE LA BD: {e}")
+        print("="*50 + "\n")
+        print(f"[DB ERROR] {e}")
+        flash('Error al registrar el aprendiz. Verifica que el documento no esté duplicado.', 'error')
+    finally:
+        conn.close()
+
+    return redirect(url_for('coordinador.formulario_ficha'))
+
 
 @coordinador.route('/coordinador/aprendices-masivo', methods=['POST'])
 @solo_rol('coordinador')
