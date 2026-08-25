@@ -1,0 +1,79 @@
+{% extends 'base_aprendiz.html' %}
+{% set active_page = 'permisos' %}
+
+{% block content %}
+<div style="margin-bottom: 30px;">
+    <h2>PERMISOS DE SALIDA ANTICIPADA</h2>
+    <p style="color: var(--text-muted);">Solicita retirarte antes de finalizar la jornada y consulta el estado de tus solicitudes.</p>
+</div>
+
+{% if mensaje %}
+    {% set tipo, texto = mensaje %}
+    <div class="card" style="margin-bottom: 20px;
+              {% if tipo == 'exito' %}background: rgba(22,163,74,0.12); color: var(--primary);
+              {% else %}background: rgba(220,38,38,0.12); color: var(--danger);{% endif %}">
+        {{ texto }}
+    </div>
+{% endif %}
+
+<div class="dashboard-grid">
+    <div class="card">
+        <h3>Nueva Solicitud</h3>
+        <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 20px;">
+            Indica la hora a la que necesitas retirarte y el motivo. Tu instructor debe aprobarla antes de que salgas.
+        </p>
+
+        <form method="POST" action="{{ url_for('aprendiz.permisos_aprendiz') }}" style="display: flex; flex-direction: column; gap: 15px;">
+            <div>
+                <label style="display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 5px;">Hora de Salida Solicitada</label>
+                <input type="time" name="hora_solicitada" required style="width: 100%; background: var(--bg-main); border: 1px solid var(--border-color); padding: 10px; border-radius: 6px; color: var(--text-white);">
+            </div>
+            <div>
+                <label style="display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 5px;">Motivo</label>
+                <input type="text" name="motivo" placeholder="Ej: Cita médica, diligencia personal" required style="width: 100%; background: var(--bg-main); border: 1px solid var(--border-color); padding: 10px; border-radius: 6px; color: var(--text-white);">
+            </div>
+            <button type="submit" style="background: var(--primary); border: none; padding: 12px; border-radius: 6px; font-weight: bold; cursor: pointer; color: var(--bg-main);">
+                Enviar Solicitud
+            </button>
+        </form>
+    </div>
+
+    <div class="card">
+        <h3>Mis Solicitudes</h3>
+        <table class="custom-table" style="margin-top: 15px;">
+            <thead>
+                <tr>
+                    <th>Fecha</th>
+                    <th>Hora Solicitada</th>
+                    <th>Motivo</th>
+                    <th>Estado</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for solicitud in solicitudes %}
+                <tr>
+                    <td>{{ solicitud.Fecha.strftime('%d/%m/%Y') if solicitud.Fecha else '-' }}</td>
+                    <td>{{ solicitud.Hora_Solicitada }}</td>
+                    <td>{{ solicitud.Motivo }}</td>
+                    <td>
+                        {% if solicitud.Estado == 'Aprobado' %}
+                            <span class="badge badge-presente">Aprobado</span>
+                        {% elif solicitud.Estado == 'Rechazado' %}
+                            <span class="badge" style="background: rgba(220,38,38,0.15); color: var(--danger);">Rechazado</span>
+                        {% else %}
+                            <span class="badge" style="background: rgba(217,119,6,0.15); color: var(--warning);">Pendiente</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="4" style="text-align: center; color: var(--text-muted); padding: 20px;">
+                        Aun no has enviado solicitudes de salida anticipada.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

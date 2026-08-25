@@ -54,6 +54,9 @@
                 </li>
                 {% endif %}
 
+                <li class="nav-item {% if active_page == 'permisos' %}active{% endif %}">
+                    <a href="{{ url_for('instructor.permisos_instructor') }}"><i class="ph ph-door-open"></i> Permisos de Salida</a>
+                </li>
                 <li class="nav-item {% if active_page == 'config' %}active{% endif %}">
                     <a href="{{ url_for('instructor.configuracion') }}"><i class="ph ph-gear"></i> Configuración</a>
                 </li>

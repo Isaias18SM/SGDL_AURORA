@@ -1,5 +1,6 @@
 import pymysql
 import pymysql.cursors
+from datetime import datetime, date
 
 
 def get_db():
@@ -231,3 +232,73 @@ def actualizar_perfil_usuario(id_usuario, nombre_completo, correo):
     finally:
         if conn:
             conn.close()
+
+
+UMBRAL_RIESGO_ASISTENCIA = 80  # % minimo de asistencia antes de alertar riesgo academico
+
+
+def obtener_historial_asistencia(id_usuario, fecha=None, estado=None):
+    """Devuelve el historial de asistencia de un aprendiz, con filtros opcionales de fecha y estado."""
+    conn = None
+    try:
+        conn = get_db()
+        with conn.cursor() as cur:
+            sql = "SELECT Fecha_Requerida, Estado FROM asistencia WHERE Id_Usuario = %s"
+            params = [id_usuario]
+
+            if fecha:
+                sql += " AND Fecha_Requerida = %s"
+                params.append(fecha)
+
+            if estado and estado != 'Todos los Estados':
+                sql += " AND Estado = %s"
+                params.append(estado)
+
+            sql += " ORDER BY Fecha_Requerida DESC"
+
+            cur.execute(sql, tuple(params))
+            return cur.fetchall()
+    except Exception as e:
+        print(f"[DB ERROR] {e}")
+        return []
+    finally:
+        if conn:
+            conn.close()
+
+
+def calcular_resumen_asistencia(id_usuario):
+    """Calcula presentes/fallas/excusas/retardos, el % de asistencia acumulado y si el
+    aprendiz esta en riesgo academico por inasistencia excesiva (criterio APR-003 #14)."""
+    conn = None
+    filas = []
+    try:
+        conn = get_db()
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT Estado, COUNT(*) AS total FROM asistencia WHERE Id_Usuario = %s GROUP BY Estado",
+                (id_usuario,)
+            )
+            filas = cur.fetchall()
+    except Exception as e:
+        print(f"[DB ERROR] {e}")
+    finally:
+        if conn:
+            conn.close()
+
+    conteo = {fila['Estado']: fila['total'] for fila in filas}
+    total_registros = sum(conteo.values())
+    presentes = conteo.get('Presente', 0)
+
+    porcentaje = round((presentes / total_registros) * 100, 1) if total_registros > 0 else 100.0
+    en_riesgo = porcentaje < UMBRAL_RIESGO_ASISTENCIA
+
+    return {
+        "porcentaje": porcentaje,
+        "total_registros": total_registros,
+        "presentes": presentes,
+        "fallas": conteo.get('Falla', 0),
+        "excusas": conteo.get('Excusa', 0),
+        "retardos": conteo.get('Retardo', 0),
+        "en_riesgo": en_riesgo,
+        "umbral": UMBRAL_RIESGO_ASISTENCIA
+    }

@@ -7,32 +7,76 @@
     <p style="color: var(--text-muted);">Gestiona los soportes de tus fallas o revisa las circulares publicadas.</p>
 </div>
 
+{% if mensaje %}
+    {% set tipo, texto = mensaje %}
+    <div class="card" style="margin-bottom: 20px;
+              {% if tipo == 'exito' %}background: rgba(22,163,74,0.12); color: var(--primary);
+              {% else %}background: rgba(220,38,38,0.12); color: var(--danger);{% endif %}">
+        {{ texto }}
+    </div>
+{% endif %}
+
 <div class="dashboard-grid">
     <div class="card">
         <h3>Radicar Nueva Excusa</h3>
-        <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 20px;">Sube tus comprobantes oficiales (EPS, calamidades) para aprobación del instructor.</p>
+        <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 20px;">Sube el soporte en PDF de una de tus fallas registradas para que tu instructor la revise.</p>
 
-        <div style="display: flex; flex-direction: column; gap: 15px;">
+        <form method="POST" action="{{ url_for('aprendiz.novedades_aprendiz') }}" enctype="multipart/form-data" style="display: flex; flex-direction: column; gap: 15px;">
             <div>
-                <label style="display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 5px;">Fecha de la Inasistencia</label>
-                <input type="date" style="width: 100%; background: var(--bg-main); border: 1px solid var(--border-color); padding: 10px; border-radius: 6px; color: var(--text-white);">
+                <label style="display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 5px;">Falta a Justificar</label>
+                <select name="fecha_falla" required style="width: 100%; background: var(--bg-main); border: 1px solid var(--border-color); padding: 10px; border-radius: 6px; color: var(--text-white);">
+                    <option value="">Selecciona una fecha</option>
+                    {% for falla in fallas_pendientes %}
+                    <option value="{{ falla.Fecha_Requerida }}">{{ falla.Fecha_Requerida.strftime('%d/%m/%Y') if falla.Fecha_Requerida else falla.Fecha_Requerida }}</option>
+                    {% endfor %}
+                </select>
+                {% if not fallas_pendientes %}
+                <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 4px;">No tienes fallas pendientes por justificar.</p>
+                {% endif %}
             </div>
             <div>
-                <label style="display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 5px;">Motivo / Asunto</label>
-                <input type="text" placeholder="Ej: Cita médica especialista SURA" style="width: 100%; background: var(--bg-main); border: 1px solid var(--border-color); padding: 10px; border-radius: 6px; color: var(--text-white);">
+                <label style="display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 5px;">Adjuntar Documento (solo PDF)</label>
+                <input type="file" name="soporte" accept="application/pdf,.pdf" required
+                       style="width: 100%; background: var(--bg-main); border: 1px solid var(--border-color); padding: 10px; border-radius: 6px; color: var(--text-white);">
             </div>
-            <div>
-                <label style="display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 5px;">Adjuntar Documento (PDF / Imagen)</label>
-                <div style="border: 2px dashed var(--border-color); padding: 20px; text-align: center; border-radius: 8px; cursor: pointer; color: var(--text-muted);">
-                    <i class="ph ph-cloud-arrow-up" style="font-size: 2rem; color: var(--primary);"></i>
-                    <p style="font-size: 0.85rem; margin-top: 5px;">Arrastra tu archivo aquí o haz clic para buscar</p>
-                </div>
-            </div>
-            <button type="button" style="background: var(--primary); border: none; padding: 12px; border-radius: 6px; font-weight: bold; cursor: pointer; color: var(--bg-main);">Enviar Justificación</button>
-        </div>
+            <button type="submit" {% if not fallas_pendientes %}disabled{% endif %}
+                    style="background: var(--primary); border: none; padding: 12px; border-radius: 6px; font-weight: bold; cursor: pointer; color: var(--bg-main);">
+                Enviar Justificación
+            </button>
+        </form>
     </div>
 
     <div class="card">
+        <h3>Soportes Cargados</h3>
+        <table class="custom-table" style="margin-top: 15px;">
+            <thead>
+                <tr>
+                    <th>Fecha de la Falta</th>
+                    <th>Archivo</th>
+                    <th>Cargado</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for s in soportes_cargados %}
+                <tr>
+                    <td>{{ s.Fecha_Requerida.strftime('%d/%m/%Y') if s.Fecha_Requerida else '-' }}</td>
+                    <td><a href="{{ url_for('static', filename=s.Soporte_Justificacion) }}" target="_blank" style="color: var(--primary);">Ver PDF</a></td>
+                    <td>{{ s.Fecha_Carga_Soporte.strftime('%d/%m/%Y %H:%M') if s.Fecha_Carga_Soporte else '-' }}</td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="3" style="text-align: center; color: var(--text-muted); padding: 20px;">
+                        Aun no has cargado soportes.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="dashboard-grid" style="margin-top: 20px;">
+    <div class="card" style="grid-column: 1 / -1;">
         <h3>Anuncios de Instructores</h3>
         <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 15px;">Mensajes institucionales importantes publicados recientemente.</p>
 

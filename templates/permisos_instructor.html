@@ -1,0 +1,56 @@
+{% extends 'base.html' %}
+{% set active_page = 'permisos' %}
+
+{% block content %}
+<div style="margin-bottom: 30px;">
+    <h2>PERMISOS DE SALIDA ANTICIPADA</h2>
+    <p style="color: var(--text-muted);">Aprueba o rechaza las solicitudes de salida anticipada de los aprendices.</p>
+</div>
+
+<div class="card">
+    <h3>Solicitudes Pendientes ({{ solicitudes|length }})</h3>
+    <table class="custom-table" style="margin-top: 15px;">
+        <thead>
+            <tr>
+                <th>Aprendiz</th>
+                <th>Fecha</th>
+                <th>Hora Solicitada</th>
+                <th>Motivo</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for solicitud in solicitudes %}
+            <tr>
+                <td>{{ solicitud.aprendiz }}</td>
+                <td>{{ solicitud.Fecha.strftime('%d/%m/%Y') if solicitud.Fecha else '-' }}</td>
+                <td>{{ solicitud.Hora_Solicitada }}</td>
+                <td>{{ solicitud.Motivo }}</td>
+                <td>
+                    <div style="display: flex; gap: 8px;">
+                        <form method="POST" action="{{ url_for('instructor.responder_permiso', id_permiso=solicitud.Id_Permiso) }}">
+                            <input type="hidden" name="estado" value="Aprobado">
+                            <button type="submit" style="background: var(--primary); color: var(--bg-main); border: none; padding: 6px 12px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 0.8rem;">
+                                Aprobar
+                            </button>
+                        </form>
+                        <form method="POST" action="{{ url_for('instructor.responder_permiso', id_permiso=solicitud.Id_Permiso) }}">
+                            <input type="hidden" name="estado" value="Rechazado">
+                            <button type="submit" style="background: transparent; color: var(--danger); border: 1px solid var(--danger); padding: 6px 12px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 0.8rem;">
+                                Rechazar
+                            </button>
+                        </form>
+                    </div>
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="5" style="text-align: center; color: var(--text-muted); padding: 20px;">
+                    No hay solicitudes de salida anticipada pendientes.
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
