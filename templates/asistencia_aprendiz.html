@@ -7,8 +7,6 @@
     <p style="color: var(--text-muted);">Consulta tu historial diario de asistencia y tu porcentaje acumulado.</p>
 </div>
 
-{% if resumen.en_riesgo %}
-
 {% if mensaje %}
     {% set tipo, texto = mensaje %}
     <div class="card" style="margin-bottom: 20px;
@@ -18,6 +16,7 @@
     </div>
 {% endif %}
 
+{% if resumen.en_riesgo %}
 <div class="card" style="background: rgba(220,38,38,0.12); border: 1px solid var(--danger); margin-bottom: 20px; display: flex; align-items: center; gap: 12px;">
     <i class="ph ph-warning" style="color: var(--danger); font-size: 1.4rem;"></i>
     <div>
@@ -59,9 +58,9 @@
     {% if fecha_filtro or (estado_filtro and estado_filtro != 'Todos los Estados') %}
     <a href="{{ url_for('aprendiz.asistencia_aprendiz') }}" style="color: var(--text-muted); font-size: 0.85rem; white-space: nowrap;">Limpiar filtros</a>
     {% endif %}
-        <button type="submit" name="descargar" value="1"style="background: var(--primary); border: none; padding: 10px 16px; border-radius: 6px; font-weight: bold; cursor: pointer; color: var(--bg-main); white-space: nowrap; display: flex; align-items: center; gap: 6px;">
-            <i class="ph ph-file-pdf"></i> Descargar reporte PDF
-        </button>
+    <button type="submit" name="descargar" value="1" style="background: var(--primary); border: none; padding: 10px 16px; border-radius: 6px; font-weight: bold; cursor: pointer; color: var(--bg-main); white-space: nowrap; display: flex; align-items: center; gap: 6px;">
+        <i class="ph ph-file-pdf"></i> Descargar reporte PDF
+    </button>
 </form>
 
 <div class="card">
