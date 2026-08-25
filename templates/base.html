@@ -22,7 +22,11 @@
                 {% if session.get('rol') == 'coordinador' %}
 
 <li class="nav-item {% if active_page == 'formulario' %}active{% endif %}">
-    <a href="{{ url_for('coordinador.formulario_coordinador') }}"><i class="ph ph-folder"></i> formulario</a>
+    <a href="{{ url_for('coordinador.formulario_coordinador') }}"><i class="ph ph-folder"></i> Formulario de aprendices</a>
+</li>
+
+<li class="nav-item {% if active_page == 'formulario' %}active{% endif %}">
+    <a href="{{ url_for('coordinador.formulario_ficha') }}"><i class="ph ph-folder"></i> Formulario de fichas</a>
 </li>
 <li class="nav-item {% if active_page == 'lista' %}active{% endif %}">
     <a href="{{ url_for('coordinador.lista_coordinador') }}"><i class="ph ph-clipboard-text"></i> Lista de Asistencia</a>
