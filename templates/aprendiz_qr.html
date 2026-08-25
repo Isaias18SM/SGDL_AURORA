@@ -1,0 +1,38 @@
+{% extends 'base_aprendiz.html' %}
+{% set active_page = 'mi_qr' %}
+
+{% block content %}
+<div style="margin-bottom: 30px;">
+    <h2>MI CÓDIGO QR</h2>
+    <p style="color: var(--text-muted);">Escanea este código con la cámara para registrar tu entrada o salida, en caso de que los botones no funcionen.</p>
+</div>
+
+<div class="card" style="display:flex; flex-direction:column; align-items:center; padding:40px;">
+    {% if token %}
+        <div id="qrcode"></div>
+        <p style="margin-top:20px; color: var(--text-muted); font-size:0.85rem; max-width: 320px; text-align: center;">
+            Este código es personal e intransferible. Guárdalo en tu celular (captura de pantalla) para escanearlo desde otro dispositivo si lo necesitas.
+        </p>
+        <a href="{{ url_for('aprendiz.escanear_qr') }}" target="_blank" 
+           style="margin-top: 20px; background: var(--primary); color: var(--bg-main); padding: 12px 24px; border-radius: 8px; font-weight: bold; text-decoration: none; display:inline-flex; align-items:center; gap:8px;">
+            <i class="ph ph-camera"></i> Abrir escáner
+        </a>
+    {% else %}
+        <p style="color: var(--danger);">No se encontró un código QR asociado a tu usuario. Contacta a tu coordinador.</p>
+    {% endif %}
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+<script>
+    if (document.getElementById("qrcode")) {
+        new QRCode(document.getElementById("qrcode"), {
+            text: "{{ token }}",
+            width: 220,
+            height: 220,
+            colorDark: "#000000",
+            colorLight: "#ffffff"
+        });
+    }
+</script>
+{% endblock %}

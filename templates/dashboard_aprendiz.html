@@ -14,10 +14,19 @@
             <span class="badge badge-presente" style="margin-top: 8px;">ETAPA LECTIVA</span>
         </div>
         <div style="text-align: right;">
-            <button style="background: var(--primary); color: var(--bg-main); border: none; padding: 12px 20px; border-radius: 8px; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 8px;">
-                <i class="ph ph-fingerprint"></i> Registrar Entrada / Salida
-            </button>
+            <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                <button id="btnRegistrarEntrada" data-tipo="ENTRADA" class="btn-asistencia" style="background: var(--primary); color: var(--bg-main); border: none; padding: 12px 20px; border-radius: 8px; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                    <i class="ph ph-sign-in"></i> Registrar Entrada
+                </button>
+                <button id="btnRegistrarSalida" data-tipo="SALIDA" class="btn-asistencia" style="background: transparent; color: var(--primary); border: 2px solid var(--primary); padding: 12px 20px; border-radius: 8px; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                    <i class="ph ph-sign-out"></i> Registrar Salida
+                </button>
+            </div>
+            <span id="mensajeAsistencia" style="font-size: 0.85rem; display: block; margin-top: 8px;"></span>
             <span style="font-size: 0.8rem; color: var(--text-muted); display: block; margin-top: 6px;"><i class="ph ph-crosshair"></i> Geolocalización activa</span>
+            <a href="{{ url_for('aprendiz.mi_qr') }}" style="font-size: 0.8rem; color: var(--primary); display: block; margin-top: 10px; text-decoration: none;">
+                <i class="ph ph-qr-code"></i> ¿Los botones no funcionan? Usa tu código QR
+            </a>
         </div>
     </div>
 
@@ -58,4 +67,48 @@
         <p style="color: var(--warning); font-size: 1.1rem; font-weight: bold; margin-top: 10px;">1 Pendiente</p>
     </div>
 </div>
+
+<script>
+document.querySelectorAll('.btn-asistencia').forEach(function (boton) {
+    boton.addEventListener('click', function () {
+        const tipo = this.dataset.tipo;
+        const mensaje = document.getElementById('mensajeAsistencia');
+        const botones = document.querySelectorAll('.btn-asistencia');
+
+        botones.forEach(function (b) { b.disabled = true; b.style.opacity = '0.6'; });
+        mensaje.textContent = 'Registrando...';
+        mensaje.style.color = 'var(--text-muted)';
+
+        fetch('/api/registrar-entrada', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ tipo: tipo })
+        })
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                let texto = data.message;
+                if (data.hora) {
+                    const horaLegible = new Date(data.hora.replace(' ', 'T')).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                    texto += ' — ' + horaLegible;
+                }
+                mensaje.textContent = texto;
+
+                if (data.status === 'success') {
+                    mensaje.style.color = 'var(--primary)';
+                } else if (data.status === 'duplicado') {
+                    mensaje.style.color = 'var(--warning)';
+                } else {
+                    mensaje.style.color = 'var(--danger)';
+                }
+            })
+            .catch(function () {
+                mensaje.textContent = 'No se pudo conectar con el servidor.';
+                mensaje.style.color = 'var(--danger)';
+            })
+            .finally(function () {
+                botones.forEach(function (b) { b.disabled = false; b.style.opacity = '1'; });
+            });
+    });
+});
+</script>
 {% endblock %}
