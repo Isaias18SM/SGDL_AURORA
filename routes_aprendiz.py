@@ -1,4 +1,5 @@
 import os
+import uuid
 from io import BytesIO
 from datetime import datetime
 from flask import Blueprint, render_template, session, request, send_file
@@ -224,15 +225,29 @@ def marcar_notificaciones():
 @aprendiz_bp.route('/aprendiz/mi-qr')
 @solo_rol('aprendiz')
 def mi_qr():
+    """Muestra el QR personal del aprendiz. Si el usuario todavia no tiene
+    un Token_QR asignado (p. ej. aprendices creados antes de que existiera
+    esta funcionalidad), se genera uno nuevo aqui mismo y se guarda en la
+    base de datos, con el mismo mecanismo (uuid4) que ya se usa al crear
+    aprendices desde el panel del coordinador."""
     conn = get_db()
     try:
         with conn.cursor() as cur:
             cur.execute("SELECT Token_QR FROM usuario WHERE Id_Usuario = %s", (session['id'],))
             fila = cur.fetchone()
+
+            token = fila['Token_QR'] if fila else None
+
+            if fila and not token:
+                token = uuid.uuid4().hex
+                cur.execute(
+                    "UPDATE usuario SET Token_QR = %s WHERE Id_Usuario = %s",
+                    (token, session['id'])
+                )
+                conn.commit()
     finally:
         conn.close()
 
-    token = fila['Token_QR'] if fila else None
     return render_template('aprendiz_qr.html', active_page='mi_qr', token=token)
 
 
