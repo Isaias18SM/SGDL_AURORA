@@ -86,8 +86,8 @@
 </style>
 
 <div style="margin-bottom: 30px;">
-    <h2>APRENDICES</h2>
-    <p style="color: var(--text-muted);">Registra un aprendiz de forma individual o carga varios a la vez desde un archivo CSV.</p>
+    <h2>APRENDICES E INSTRUCTORES</h2>
+    <p style="color: var(--text-muted);">Registra un aprendiz o instructor de forma individual, o carga varios aprendices a la vez desde un archivo CSV.</p>
 </div>
 
 <div class="card">
@@ -101,7 +101,7 @@
     </div>
 
     <div class="tab-panel active" id="tab-individual">
-        <form method="POST" action="{{ url_for('coordinador.aprendiz_manual') }}" class="form-grid">
+        <form method="POST" action="{{ url_for('coordinador.registrar_usuario') }}" class="form-grid" id="form-registro">
             <div class="form-group">
                 <label class="form-label">Nombres</label>
                 <input type="text" name="nombres" class="form-input" required>
@@ -109,6 +109,13 @@
             <div class="form-group">
                 <label class="form-label">Apellidos</label>
                 <input type="text" name="apellidos" class="form-input" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Rol</label>
+                <select name="rol" id="select-rol" class="form-input" required>
+                    <option value="Aprendiz">Aprendiz</option>
+                    <option value="Instructor">Instructor</option>
+                </select>
             </div>
             <div class="form-group">
                 <label class="form-label">Tipo de documento</label>
@@ -125,9 +132,9 @@
                 <label class="form-label">Correo institucional</label>
                 <input type="email" name="correo" class="form-input" placeholder="nombre.apellido@sena.edu.co">
             </div>
-            <div class="form-group">
+            <div class="form-group" id="grupo-ficha">
                 <label class="form-label">Ficha</label>
-                <select name="ficha" class="form-input" required>
+                <select name="ficha" id="select-ficha" class="form-input" required>
                     {% for f in fichas %}
                         <option value="{{ f.No_FICHA }}">Ficha {{ f.No_FICHA }}</option>
                     {% endfor %}
@@ -135,7 +142,7 @@
             </div>
             <div class="form-group form-group-full">
                 <button type="submit" class="btn-primary">
-                    <i class="ph ph-user-plus"></i> Registrar aprendiz
+                    <i class="ph ph-user-plus"></i> Registrar
                 </button>
             </div>
         </form>
@@ -198,6 +205,7 @@
 </div>
 
 <script>
+    // Cambiar entre pestañas "Registro Individual" y "Carga Masiva"
     document.querySelectorAll('.tab-btn').forEach((btn) => {
         btn.addEventListener('click', () => {
             document.querySelectorAll('.tab-btn').forEach((b) => b.classList.remove('active'));
@@ -206,5 +214,23 @@
             document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
         });
     });
+
+    // Mostrar/ocultar el campo Ficha según el Rol elegido en Registro Individual
+    const selectRol = document.getElementById('select-rol');
+    const grupoFicha = document.getElementById('grupo-ficha');
+    const selectFicha = document.getElementById('select-ficha');
+
+    function actualizarVisibilidadFicha() {
+        if (selectRol.value === 'Instructor') {
+            grupoFicha.style.display = 'none';
+            selectFicha.removeAttribute('required');
+        } else {
+            grupoFicha.style.display = '';
+            selectFicha.setAttribute('required', 'required');
+        }
+    }
+
+    selectRol.addEventListener('change', actualizarVisibilidadFicha);
+    actualizarVisibilidadFicha();
 </script>
 {% endblock %}

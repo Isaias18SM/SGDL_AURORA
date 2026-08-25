@@ -88,32 +88,14 @@
     }
 </style>
 
-<div id="debug-panel" style="position:fixed; bottom:0; left:0; right:0; background:#111; color:#0f0; font-family:monospace; font-size:12px; padding:10px; z-index:500; max-height:200px; overflow:auto; white-space:pre-wrap;"></div>
-
 <script>
 (function () {
-    const debugPanel = document.getElementById('debug-panel');
-    function debugLog(msg) {
-        debugPanel.textContent += msg + '\n';
-        debugPanel.scrollTop = debugPanel.scrollHeight;
-    }
-
-    window.onerror = function (message, source, lineno, colno, error) {
-        debugLog('!!! ERROR JS !!! ' + message + '  (linea ' + lineno + ')');
-    };
-
-    debugLog('--- DEBUG LISTA ASISTENCIA (script iniciado) ---');
-
     const badgeClasePorEstado = {
         'Presente': 'badge-presente',
         'Falla':    'badge-falla',
         'Excusa':   'badge-excusa',
         'Retardo':  'badge-retardo'
     };
-
-    debugLog('Botones .btn-menu-acciones encontrados: ' + document.querySelectorAll('.btn-menu-acciones').length);
-    debugLog('Divs .menu-acciones encontrados: ' + document.querySelectorAll('.menu-acciones').length);
-    debugLog('Botones .opcion-estado encontrados: ' + document.querySelectorAll('.opcion-estado').length);
 
     function cerrarTodosLosMenus() {
         document.querySelectorAll('.menu-acciones').forEach(m => {
@@ -123,7 +105,9 @@
 
     document.querySelectorAll('.btn-menu-acciones').forEach(btn => {
         const menu = btn.nextElementSibling;
+        const fila = btn.closest('tr');
         btn._menu = menu;
+        menu._fila = fila;
         document.body.appendChild(menu);
 
         menu.style.position = 'fixed';
@@ -156,16 +140,13 @@
     document.addEventListener('click', cerrarTodosLosMenus);
     document.addEventListener('scroll', cerrarTodosLosMenus, true);
 
-    debugLog('Registrando listeners de .opcion-estado ...');
-
     document.querySelectorAll('.opcion-estado').forEach(opcion => {
         opcion.addEventListener('click', async (e) => {
             e.stopPropagation();
-            const fila = opcion.closest('tr');
+            const menu = opcion.closest('.menu-acciones');
+            const fila = menu._fila;
             const id = parseInt(fila.dataset.id, 10);
             const nuevoEstado = opcion.dataset.estado;
-
-            debugLog('--- CLICK en opcion de estado --- id=' + id + ' estado=' + nuevoEstado);
 
             try {
                 const resp = await fetch('/api/cambiar-estado', {
@@ -174,27 +155,22 @@
                     body: JSON.stringify({ id: id, estado: nuevoEstado })
                 });
 
-                debugLog('HTTP status = ' + resp.status);
                 const data = await resp.json();
-                debugLog('respuesta = ' + JSON.stringify(data));
 
                 if (data.status === 'success') {
                     const celda = fila.querySelector('.celda-estado');
                     const clase = badgeClasePorEstado[nuevoEstado] || 'badge-retardo';
                     celda.innerHTML = '<span class="badge ' + clase + '">' + nuevoEstado + '</span>';
-                    debugLog('Badge actualizado en pantalla a: ' + nuevoEstado);
                 } else {
-                    debugLog('ERROR del servidor: ' + (data.message || 'No se pudo actualizar el estado.'));
+                    alert(data.message || 'No se pudo actualizar el estado.');
                 }
             } catch (err) {
-                debugLog('ERROR fetch: ' + err.message);
+                alert('Error de conexión al actualizar el estado.');
             } finally {
                 opcion.closest('.menu-acciones').style.display = 'none';
             }
         });
     });
-
-    debugLog('--- Script terminado sin errores ---');
 })();
 </script>
 {% endblock %}

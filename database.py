@@ -73,7 +73,7 @@ def obtener_aprendices_por_ficha(no_ficha, fecha=None):
         with conn.cursor() as cur:
             cur.execute("""
                 SELECT
-                    u.Id_Usuario,
+                    u.Id_Usuario AS id,
                     CONCAT(u.Nombre, ' ', u.Apellidos) AS nombre,
                     u.No_Documento AS documento,
                     u.ROL AS perfil,
@@ -96,6 +96,79 @@ def obtener_aprendices_por_ficha(no_ficha, fecha=None):
     finally:
         if conn:
             conn.close()
+
+
+def obtener_historial_asistencia(id_usuario, fecha=None, estado=None):
+    """Devuelve el historial de asistencia de un aprendiz, opcionalmente
+    filtrado por fecha exacta y/o estado."""
+    conn = None
+    try:
+        conn = get_db()
+        with conn.cursor() as cur:
+            sql = """
+                SELECT Id_Asistencia, Fecha_Requerida, HoraRegistro, Estado
+                FROM asistencia
+                WHERE Id_Usuario = %s
+            """
+            params = [id_usuario]
+
+            if fecha:
+                sql += " AND Fecha_Requerida = %s"
+                params.append(fecha)
+
+            if estado and estado != 'Todos los Estados':
+                sql += " AND Estado = %s"
+                params.append(estado)
+
+            sql += " ORDER BY Fecha_Requerida DESC, HoraRegistro DESC"
+
+            cur.execute(sql, tuple(params))
+            return cur.fetchall()
+    except Exception as e:
+        print(f"[DB ERROR] {e}")
+        return []
+    finally:
+        if conn:
+            conn.close()
+
+
+def calcular_resumen_asistencia(id_usuario):
+    """Calcula totales de asistencia (presentes, fallas, retardos, excusas)
+    y el porcentaje de asistencia de un aprendiz."""
+    conn = None
+    try:
+        conn = get_db()
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT
+                    COUNT(*) AS total,
+                    SUM(CASE WHEN Estado = 'Presente' THEN 1 ELSE 0 END) AS presentes,
+                    SUM(CASE WHEN Estado = 'Falla' THEN 1 ELSE 0 END) AS fallas,
+                    SUM(CASE WHEN Estado = 'Retardo' THEN 1 ELSE 0 END) AS retardos,
+                    SUM(CASE WHEN Estado = 'Excusa' THEN 1 ELSE 0 END) AS excusas
+                FROM asistencia
+                WHERE Id_Usuario = %s
+            """, (id_usuario,))
+            fila = cur.fetchone() or {}
+    except Exception as e:
+        print(f"[DB ERROR] {e}")
+        fila = {}
+    finally:
+        if conn:
+            conn.close()
+
+    total = fila.get('total') or 0
+    presentes = fila.get('presentes') or 0
+    porcentaje = round((presentes / total) * 100, 1) if total else 0
+
+    return {
+        'total': total,
+        'presentes': presentes,
+        'fallas': fila.get('fallas') or 0,
+        'retardos': fila.get('retardos') or 0,
+        'excusas': fila.get('excusas') or 0,
+        'porcentaje': porcentaje
+    }
 
 
 def buscar_aprendiz_por_documento(documento, tipo_doc=None):
@@ -158,73 +231,3 @@ def actualizar_perfil_usuario(id_usuario, nombre_completo, correo):
     finally:
         if conn:
             conn.close()
-
-
-UMBRAL_RIESGO_ASISTENCIA = 80  # % minimo de asistencia antes de alertar riesgo academico
-
-
-def obtener_historial_asistencia(id_usuario, fecha=None, estado=None):
-    """Devuelve el historial de asistencia de un aprendiz, con filtros opcionales de fecha y estado."""
-    conn = None
-    try:
-        conn = get_db()
-        with conn.cursor() as cur:
-            sql = "SELECT Fecha_Requerida, Estado FROM asistencia WHERE Id_Usuario = %s"
-            params = [id_usuario]
-
-            if fecha:
-                sql += " AND Fecha_Requerida = %s"
-                params.append(fecha)
-
-            if estado and estado != 'Todos los Estados':
-                sql += " AND Estado = %s"
-                params.append(estado)
-
-            sql += " ORDER BY Fecha_Requerida DESC"
-
-            cur.execute(sql, tuple(params))
-            return cur.fetchall()
-    except Exception as e:
-        print(f"[DB ERROR] {e}")
-        return []
-    finally:
-        if conn:
-            conn.close()
-
-
-def calcular_resumen_asistencia(id_usuario):
-    """Calcula presentes/fallas/excusas/retardos, el % de asistencia acumulado y si el
-    aprendiz esta en riesgo academico por inasistencia excesiva (criterio APR-003 #14)."""
-    conn = None
-    filas = []
-    try:
-        conn = get_db()
-        with conn.cursor() as cur:
-            cur.execute(
-                "SELECT Estado, COUNT(*) AS total FROM asistencia WHERE Id_Usuario = %s GROUP BY Estado",
-                (id_usuario,)
-            )
-            filas = cur.fetchall()
-    except Exception as e:
-        print(f"[DB ERROR] {e}")
-    finally:
-        if conn:
-            conn.close()
-
-    conteo = {fila['Estado']: fila['total'] for fila in filas}
-    total_registros = sum(conteo.values())
-    presentes = conteo.get('Presente', 0)
-
-    porcentaje = round((presentes / total_registros) * 100, 1) if total_registros > 0 else 100.0
-    en_riesgo = porcentaje < UMBRAL_RIESGO_ASISTENCIA
-
-    return {
-        "porcentaje": porcentaje,
-        "total_registros": total_registros,
-        "presentes": presentes,
-        "fallas": conteo.get('Falla', 0),
-        "excusas": conteo.get('Excusa', 0),
-        "retardos": conteo.get('Retardo', 0),
-        "en_riesgo": en_riesgo,
-        "umbral": UMBRAL_RIESGO_ASISTENCIA
-    }
