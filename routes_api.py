@@ -1,3 +1,4 @@
+from datetime import date
 from flask import Blueprint, request, jsonify, session
 from database import get_db
 from decorators import solo_rol_api, login_requerido
@@ -94,8 +95,46 @@ def api_fichas():
 
 
 @api_bp.route('/api/cambiar-estado', methods=['POST'])
-@login_requerido
+@solo_rol_api('instructor', 'coordinador')
 def api_cambiar_estado():
+    """Permite al instructor/coordinador marcar manualmente el estado
+    (Presente, Falla, Retardo, Excusa) de un aprendiz para el día de hoy."""
+    data = request.get_json(silent=True) or {}
+    id_usuario = data.get('id')
+    estado = (data.get('estado') or '').strip()
+
+    estados_validos = ('Presente', 'Falla', 'Retardo', 'Excusa')
+    if not id_usuario or estado not in estados_validos:
+        return jsonify({"status": "error", "message": "Datos inválidos."}), 400
+
+    hoy = date.today()
+
+    conn = None
+    try:
+        conn = get_db()
+        with conn.cursor() as cur:
+            # IMPORTANTE: esto requiere que la tabla `asistencia` tenga una
+            # llave UNIQUE sobre (Id_Usuario, Fecha_Requerida). Si no la
+            # tiene, cada clic insertará una fila nueva en vez de actualizar
+            # la existente. Ver nota más abajo para el ALTER TABLE necesario.
+            cur.execute(
+                """
+                INSERT INTO asistencia (Id_Usuario, Fecha_Requerida, Estado)
+                VALUES (%s, %s, %s)
+                ON DUPLICATE KEY UPDATE Estado = VALUES(Estado)
+                """,
+                (id_usuario, hoy, estado)
+            )
+        conn.commit()
+    except Exception as e:
+        print(f"[DB ERROR] {e}")
+        if conn:
+            conn.rollback()
+        return jsonify({"status": "error", "message": "Error al guardar en la base de datos."}), 500
+    finally:
+        if conn:
+            conn.close()
+
     return jsonify({"status": "success", "message": "Estado actualizado correctamente"})
 
 

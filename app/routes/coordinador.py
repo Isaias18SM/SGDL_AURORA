@@ -1,6 +1,6 @@
 import csv
 import io
-
+import uuid
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from decorators import solo_rol
 from database import get_db
@@ -195,58 +195,74 @@ def formulario_coordinador():
     )
 
 
-@coordinador.route('/coordinador/aprendiz-manual', methods=['POST'])
+@coordinador.route('/coordinador/registrar-usuario', methods=['POST'])
 @solo_rol('coordinador')
-def aprendiz_manual():
+def registrar_usuario():
     nombres = request.form.get('nombres', '').strip()
     apellidos = request.form.get('apellidos', '').strip()
+    rol = request.form.get('rol', '').strip()
     tipo_doc = request.form.get('tipo_documento', '').strip()
     num_doc = request.form.get('numero_documento', '').strip()
     correo = request.form.get('correo', '').strip().lower()
     no_ficha = request.form.get('ficha', '').strip()
 
-    if not (nombres and apellidos and tipo_doc and num_doc and no_ficha):
+    if rol not in ('Aprendiz', 'Instructor'):
+        flash('Selecciona un rol válido.', 'error')
+        return redirect(url_for('coordinador.formulario_coordinador'))
+
+    campos_base_ok = nombres and apellidos and tipo_doc and num_doc
+    if rol == 'Aprendiz' and not (campos_base_ok and no_ficha):
+        flash('Completa todos los campos obligatorios.', 'error')
+        return redirect(url_for('coordinador.formulario_coordinador'))
+    if rol == 'Instructor' and not campos_base_ok:
         flash('Completa todos los campos obligatorios.', 'error')
         return redirect(url_for('coordinador.formulario_coordinador'))
 
     conn = get_db()
     try:
         with conn.cursor() as cur:
-            cur.execute(
-                """SELECT f.ID_FICHA, ufa.ID_ASIGNACION
-                   FROM ficha f
-                   JOIN usuario_ficha_asignacion ufa ON ufa.ID_FICHA = f.ID_FICHA
-                   WHERE f.No_FICHA = %s LIMIT 1""",
-                (no_ficha,)
-            )
-            resultado = cur.fetchone()
+            id_ficha = None
+            id_asignacion = None
 
-            if not resultado:
-                flash(f'La ficha {no_ficha} no existe o no tiene una asignación creada.', 'error')
-                return redirect(url_for('coordinador.formulario_coordinador'))
+            if rol == 'Aprendiz':
+                cur.execute(
+                    """SELECT f.ID_FICHA, ufa.ID_ASIGNACION
+                       FROM ficha f
+                       JOIN usuario_ficha_asignacion ufa ON ufa.ID_FICHA = f.ID_FICHA
+                       WHERE f.No_FICHA = %s LIMIT 1""",
+                    (no_ficha,)
+                )
+                resultado = cur.fetchone()
 
-            id_ficha = resultado['ID_FICHA']
-            id_asignacion = resultado['ID_ASIGNACION']
-            
-            Clave_encriptada = str(num_doc)
+                if not resultado:
+                    flash(f'La ficha {no_ficha} no existe o no tiene una asignación creada.', 'error')
+                    return redirect(url_for('coordinador.formulario_coordinador'))
+
+                id_ficha = resultado['ID_FICHA']
+                id_asignacion = resultado['ID_ASIGNACION']
+
+            clave_encriptada = str(num_doc)
 
             cur.execute(
                 """INSERT INTO usuario
                    (Nombre, Apellidos, No_Documento, TPI_DOCUMENTO, CORREO_SENA, CONTRASENA, ROL, Activo_SN)
                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)""",
-                (nombres, apellidos, num_doc, tipo_doc, correo, Clave_encriptada, 'Aprendiz', '1')
+                (nombres, apellidos, num_doc, tipo_doc, correo, clave_encriptada, rol, '1')
             )
             nuevo_id = cur.lastrowid
 
-            cur.execute(
-                "INSERT INTO usuario_ficha_asignacion (Id_Usuario, ID_FICHA, ID_ASIGNACION) VALUES (%s, %s, %s)",
-                (nuevo_id, id_ficha, id_asignacion)
-            )
+            if rol == 'Aprendiz':
+                cur.execute(
+                    "INSERT INTO usuario_ficha_asignacion (Id_Usuario, ID_FICHA, ID_ASIGNACION) VALUES (%s, %s, %s)",
+                    (nuevo_id, id_ficha, id_asignacion)
+                )
+
         conn.commit()
-        flash('Aprendiz registrado correctamente.', 'success')
+        flash(f'{rol} registrado correctamente.', 'success')
     except Exception as e:
         conn.rollback()
-        flash('Error al registrar el aprendiz. Verifica que el documento no esté duplicado.', 'error')
+        print(f"[DB ERROR] {e}")
+        flash('Error al registrar. Verifica que el documento no esté duplicado.', 'error')
     finally:
         conn.close()
 
@@ -295,13 +311,23 @@ def aprendices_masivo():
                     id_ficha = resultado['ID_FICHA']
                     id_asignacion = resultado['ID_ASIGNACION']
 
+                    numero_documento = fila.get('numero_documento', '').strip()
+
+                    # --- LA CORRECCIÓN ESTÁ AQUÍ ---
+                    # La contraseña es el mismo número de documento, sin hashear.
+                    contrasena_inicial = numero_documento
+                    # Token único para que el QR del aprendiz funcione desde el primer día.
+                    token_qr = uuid.uuid4().hex
+
                     cur.execute(
                         """INSERT INTO usuario
-                           (Nombre, Apellidos, No_Documento, TPI_DOCUMENTO, CORREO_SENA, ROL, Activo_SN)
-                           VALUES (%s, %s, %s, %s, %s, 'Aprendiz', '1')""",
+                           (Nombre, Apellidos, No_Documento, TPI_DOCUMENTO, CORREO_SENA,
+                            CONTRASENA, ROL, Activo_SN, Token_QR)
+                           VALUES (%s, %s, %s, %s, %s, %s, 'Aprendiz', '1', %s)""",
                         (fila.get('nombres', '').strip(), fila.get('apellidos', '').strip(),
-                         fila.get('numero_documento', '').strip(), fila.get('tipo_documento', '').strip(),
-                         fila.get('correo', '').strip().lower())
+                         numero_documento, fila.get('tipo_documento', '').strip(),
+                         fila.get('correo', '').strip().lower(),
+                         contrasena_inicial, token_qr)
                     )
                     nuevo_id = cur.lastrowid
 

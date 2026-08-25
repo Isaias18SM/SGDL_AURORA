@@ -73,7 +73,7 @@ def obtener_aprendices_por_ficha(no_ficha, fecha=None):
         with conn.cursor() as cur:
             cur.execute("""
                 SELECT
-                    u.Id_Usuario,
+                    u.Id_Usuario AS id,
                     CONCAT(u.Nombre, ' ', u.Apellidos) AS nombre,
                     u.No_Documento AS documento,
                     u.ROL AS perfil,
