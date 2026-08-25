@@ -1,7 +1,7 @@
 from datetime import datetime
 from flask import Blueprint, render_template, request, session, redirect, url_for
 from decorators import solo_rol, login_requerido
-
+from flask import session
 from database import obtener_fichas, obtener_aprendices_por_ficha, actualizar_perfil_usuario
 
 from database import (
@@ -40,7 +40,8 @@ def dashboard():
 @instructor_bp.route('/lista-asistencia', methods=['GET', 'POST'])
 @solo_rol('instructor', 'coordinador')
 def lista_asistencia():
-    fichas = obtener_fichas()
+    usuario_id = session.get('id') if session.get('rol') == 'instructor' else None
+    fichas = obtener_fichas(usuario_id)
 
     ficha_seleccionada = request.args.get('ficha', '').strip()
     if not ficha_seleccionada and fichas:

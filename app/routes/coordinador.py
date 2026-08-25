@@ -110,45 +110,64 @@ def reportes_coordinador():
 @solo_rol('coordinador')
 def coordinador_asignar_ficha():
     instructor_id = request.form.get('instructor_id')
-    ficha_codigo = request.form.get('ficha_codigo')
+    fichas_codigos = request.form.getlist('ficha_codigo')  # <-- ahora es una lista
+
+    if not fichas_codigos:
+        flash('Selecciona al menos una ficha para asignar.', 'error')
+        return redirect(url_for('coordinador.reportes_coordinador'))
 
     conn = get_db()
     try:
         with conn.cursor() as cur:
-            # 1. Obtener ID de la ficha
-            cur.execute("SELECT ID_FICHA FROM ficha WHERE No_FICHA = %s LIMIT 1", (ficha_codigo,))
-            ficha = cur.fetchone()
-
-            # 2. Obtener un Trimestre válido/activo de la base de datos
+            # 1. Trimestre válido/activo
             cur.execute("SELECT Id_Trimestre FROM trimestre ORDER BY Id_Trimestre DESC LIMIT 1")
             trimestre = cur.fetchone()
-
             if not trimestre:
                 flash('No hay trimestres registrados en la base de datos.', 'error')
                 return redirect(url_for('coordinador.reportes_coordinador'))
+            id_trimestre = trimestre['Id_Trimestre']
 
-            if ficha:
-                id_ficha = ficha['ID_FICHA']
-                id_trimestre = trimestre['Id_Trimestre']
+            # 2. Una sola fila de 'asignacion' para el instructor en este trimestre,
+            #    reutilizable para todas las fichas que se le asignen ahora.
+            cur.execute(
+                """INSERT INTO asignacion (Id_Usuario, Id_Trimestre, HORA_INICIO, HORA_FINALIZACION)
+                   VALUES (%s, %s, '07:00:00', '13:00:00')""",
+                (instructor_id, id_trimestre)
+            )
+            id_asignacion = cur.lastrowid
 
-                # 3. Insertar en tabla 'asignacion' cumpliendo con FK Id_Usuario e Id_Trimestre
+            asignadas, no_encontradas = 0, []
+
+            for ficha_codigo in fichas_codigos:
+                cur.execute("SELECT ID_FICHA FROM ficha WHERE No_FICHA = %s LIMIT 1", (ficha_codigo,))
+                ficha = cur.fetchone()
+
+                if not ficha:
+                    no_encontradas.append(ficha_codigo)
+                    continue
+
+                # Evita duplicar si por alguna razón ya estaba asignada a este instructor
                 cur.execute(
-                    """INSERT INTO asignacion (Id_Usuario, Id_Trimestre, HORA_INICIO, HORA_FINALIZACION) 
-                       VALUES (%s, %s, '07:00:00', '13:00:00')""",
-                    (instructor_id, id_trimestre)
+                    """SELECT 1 FROM usuario_ficha_asignacion
+                       WHERE Id_Usuario = %s AND ID_FICHA = %s LIMIT 1""",
+                    (instructor_id, ficha['ID_FICHA'])
                 )
-                id_asignacion = cur.lastrowid
+                if cur.fetchone():
+                    continue
 
-                # 4. Vincular en la tabla intermedia
                 cur.execute(
-                    """INSERT INTO usuario_ficha_asignacion (Id_Usuario, ID_FICHA, ID_ASIGNACION) 
+                    """INSERT INTO usuario_ficha_asignacion (Id_Usuario, ID_FICHA, ID_ASIGNACION)
                        VALUES (%s, %s, %s)""",
-                    (instructor_id, id_ficha, id_asignacion)
+                    (instructor_id, ficha['ID_FICHA'], id_asignacion)
                 )
-                conn.commit()
-                flash('Ficha asignada al instructor correctamente.', 'success')
-            else:
-                flash('La ficha seleccionada no existe.', 'error')
+                asignadas += 1
+
+            conn.commit()
+
+            if asignadas:
+                flash(f'{asignadas} ficha(s) asignada(s) al instructor correctamente.', 'success')
+            if no_encontradas:
+                flash(f'No se encontraron estas fichas: {", ".join(no_encontradas)}.', 'error')
     except Exception as e:
         conn.rollback()
         print(f"[ERROR ASIGNACION]: {e}")

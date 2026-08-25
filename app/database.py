@@ -42,18 +42,29 @@ def buscar_usuario(correo, contrasena):
     return None
 
 
-def obtener_fichas():
-    """Devuelve todas las fichas con su programa."""
+def obtener_fichas(id_usuario=None):
+    """Devuelve las fichas con su programa. Si se pasa id_usuario, solo las
+    fichas asignadas a ese usuario (instructor); si no, todas (coordinador)."""
     conn = None
     try:
         conn = get_db()
         with conn.cursor() as cur:
-            cur.execute("""
-                SELECT f.ID_FICHA, f.No_FICHA, f.Jornada, f.TipoDeFicha, p.Nombre AS Programa
-                FROM ficha f
-                JOIN programa p ON f.Id_Programa = p.Id_Programa
-                ORDER BY f.No_FICHA
-            """)
+            if id_usuario:
+                cur.execute("""
+                    SELECT f.ID_FICHA, f.No_FICHA, f.Jornada, f.TipoDeFicha, p.Nombre AS Programa
+                    FROM ficha f
+                    JOIN programa p ON f.Id_Programa = p.Id_Programa
+                    JOIN usuario_ficha_asignacion ufa
+                         ON ufa.ID_FICHA = f.ID_FICHA AND ufa.Id_Usuario = %s
+                    ORDER BY f.No_FICHA
+                """, (id_usuario,))
+            else:
+                cur.execute("""
+                    SELECT f.ID_FICHA, f.No_FICHA, f.Jornada, f.TipoDeFicha, p.Nombre AS Programa
+                    FROM ficha f
+                    JOIN programa p ON f.Id_Programa = p.Id_Programa
+                    ORDER BY f.No_FICHA
+                """)
             return cur.fetchall()
     except Exception as e:
         print(f"[DB ERROR] {e}")
@@ -61,7 +72,6 @@ def obtener_fichas():
     finally:
         if conn:
             conn.close()
-
 
 def obtener_aprendices_por_ficha(no_ficha, fecha=None):
     """Devuelve los aprendices reales de una ficha, con su estado de asistencia en 'fecha'.
