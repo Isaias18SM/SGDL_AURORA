@@ -23,6 +23,9 @@
                 <li class="nav-item {% if active_page == 'novedades' %}active{% endif %}">
                     <a href="{{ url_for('aprendiz.novedades_aprendiz') }}"><i class="ph ph-paperclip"></i> Justificar Novedad</a>
                 </li>
+                <li class="nav-item {% if active_page == 'permisos' %}active{% endif %}">
+                    <a href="{{ url_for('aprendiz.permisos_aprendiz') }}"><i class="ph ph-door-open"></i> Permisos de Salida</a>
+                </li>
                 <li class="nav-item {% if active_page == 'mi_qr' %}active{% endif %}">
                     <a href="{{ url_for('aprendiz.mi_qr') }}"><i class="ph ph-qr-code"></i> Mi Código QR</a>
                 </li>
@@ -46,6 +49,45 @@
                 <div class="search-bar">
                     <input type="text" placeholder="Buscar competencias, asistencias...">
                 </div>
+
+                <div class="notif-wrapper" style="position: relative; margin-right: 15px;">
+                    <button id="notifBtn" type="button" title="Notificaciones"
+                            style="position: relative; background: transparent; border: none; cursor: pointer;
+                                   font-size: 1.4rem; color: var(--text-white); display: flex; align-items: center;">
+                        <i class="ph ph-bell"></i>
+                        {% if notif_no_leidas and notif_no_leidas > 0 %}
+                        <span id="notifBadge" style="position: absolute; top: -4px; right: -6px; background: var(--danger);
+                                     color: #fff; border-radius: 999px; font-size: 0.65rem; font-weight: bold;
+                                     min-width: 16px; height: 16px; display: flex; align-items: center; justify-content: center; padding: 0 3px;">
+                            {{ notif_no_leidas }}
+                        </span>
+                        {% endif %}
+                    </button>
+
+                    <div id="notifDropdown" style="display: none; position: absolute; right: 0; top: 130%; width: 300px;
+                                z-index: 50; background: var(--bg-card); border: 1px solid var(--border-color);
+                                border-radius: 10px; box-shadow: 0 8px 20px rgba(0,0,0,0.12); overflow: hidden;">
+                        <div style="padding: 12px 15px; border-bottom: 1px solid var(--border-color); font-weight: 600; font-size: 0.9rem;">
+                            Notificaciones
+                        </div>
+                        <div style="max-height: 300px; overflow-y: auto;">
+                            {% for n in notif_recientes %}
+                            <div style="padding: 10px 15px; border-bottom: 1px solid var(--border-color); font-size: 0.82rem;
+                                        {% if not n.Leida %}background: rgba(22,163,74,0.06);{% endif %}">
+                                <p style="color: var(--text-white);">{{ n.Mensaje }}</p>
+                                <p style="color: var(--text-muted); font-size: 0.72rem; margin-top: 4px;">
+                                    {{ n.Fecha_Creacion.strftime('%d/%m/%Y %H:%M') if n.Fecha_Creacion else '' }}
+                                </p>
+                            </div>
+                            {% else %}
+                            <div style="padding: 20px 15px; text-align: center; color: var(--text-muted); font-size: 0.82rem;">
+                                No tienes notificaciones.
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+
                 <div class="user-profile">
                     <div style="text-align: right;">
                         <p style="font-size: 0.9rem; font-weight: 600;">{{ session.get('nombre', 'Aprendiz') }}</p>
@@ -54,6 +96,35 @@
                     <div class="user-avatar"></div>
                 </div>
             </header>
+
+            <script>
+                // Abre/cierra el dropdown de notificaciones y, al abrirlo,
+                // avisa al servidor para marcarlas como leidas (baja el badge).
+                (function () {
+                    var btn = document.getElementById('notifBtn');
+                    var dropdown = document.getElementById('notifDropdown');
+                    var badge = document.getElementById('notifBadge');
+                    if (!btn || !dropdown) return;
+
+                    btn.addEventListener('click', function (e) {
+                        e.stopPropagation();
+                        var abierto = dropdown.style.display === 'block';
+                        dropdown.style.display = abierto ? 'none' : 'block';
+
+                        if (!abierto && badge) {
+                            fetch("{{ url_for('aprendiz.marcar_notificaciones') }}", { method: 'POST' })
+                                .then(function () { badge.remove(); })
+                                .catch(function () {});
+                        }
+                    });
+
+                    document.addEventListener('click', function (e) {
+                        if (!dropdown.contains(e.target) && e.target !== btn) {
+                            dropdown.style.display = 'none';
+                        }
+                    });
+                })();
+            </script>
             <div class="container-fluid">
                 {% block content %}{% endblock %}
             </div>

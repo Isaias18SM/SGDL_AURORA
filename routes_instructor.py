@@ -1,7 +1,16 @@
 from datetime import datetime
-from flask import Blueprint, render_template, request, session
+from flask import Blueprint, render_template, request, session, redirect, url_for
 from decorators import solo_rol, login_requerido
+
 from database import obtener_fichas, obtener_aprendices_por_ficha, actualizar_perfil_usuario
+
+from database import (
+    obtener_fichas,
+    obtener_aprendices_por_ficha,
+    actualizar_perfil_usuario,
+    obtener_solicitudes_pendientes,
+    responder_solicitud_salida
+)
 
 instructor_bp = Blueprint('instructor', __name__)
 
@@ -68,6 +77,23 @@ def novedades():
 @solo_rol('instructor', 'coordinador')
 def historial():
     return render_template('historial.html', active_page='historial')
+
+
+
+@instructor_bp.route('/instructor/permisos')
+@solo_rol('instructor', 'coordinador')
+def permisos_instructor():
+    """APR-005: el instructor revisa y aprueba/rechaza solicitudes de salida anticipada."""
+    solicitudes = obtener_solicitudes_pendientes()
+    return render_template('permisos_instructor.html', active_page='permisos', solicitudes=solicitudes)
+
+
+@instructor_bp.route('/instructor/permisos/<int:id_permiso>/responder', methods=['POST'])
+@solo_rol('instructor', 'coordinador')
+def responder_permiso(id_permiso):
+    nuevo_estado = request.form.get('estado', '').strip()
+    responder_solicitud_salida(id_permiso, session.get('id'), nuevo_estado)
+    return redirect(url_for('instructor.permisos_instructor'))
 
 
 @instructor_bp.route('/configuracion', methods=['GET', 'POST'])

@@ -1,5 +1,6 @@
 import pymysql
 import pymysql.cursors
+from datetime import datetime, date
 
 
 def get_db():
@@ -228,3 +229,287 @@ def calcular_resumen_asistencia(id_usuario):
         "en_riesgo": en_riesgo,
         "umbral": UMBRAL_RIESGO_ASISTENCIA
     }
+
+
+def crear_solicitud_salida(id_aprendiz, motivo, hora_solicitada):
+    """Registra una nueva solicitud de salida anticipada en estado Pendiente (APR-005 #1)."""
+    conn = None
+    try:
+        conn = get_db()
+        with conn.cursor() as cur:
+            cur.execute(
+                """INSERT INTO permiso_salida (Id_Aprendiz, Fecha, Hora_Solicitada, Motivo, Estado)
+                   VALUES (%s, %s, %s, %s, 'Pendiente')""",
+                (id_aprendiz, date.today(), hora_solicitada, motivo)
+            )
+            conn.commit()
+            return {"ok": True, "message": "Solicitud de salida anticipada enviada."}
+    except Exception as e:
+        print(f"[DB ERROR] {e}")
+        if conn:
+            conn.rollback()
+        return {"ok": False, "message": "Ocurrio un error al enviar la solicitud."}
+    finally:
+        if conn:
+            conn.close()
+
+
+def obtener_solicitudes_aprendiz(id_aprendiz):
+    """Devuelve el historial de solicitudes de salida de un aprendiz, mas recientes primero."""
+    conn = None
+    try:
+        conn = get_db()
+        with conn.cursor() as cur:
+            cur.execute(
+                """SELECT Id_Permiso, Fecha, Hora_Solicitada, Motivo, Estado, Fecha_Solicitud, Fecha_Respuesta
+                   FROM permiso_salida
+                   WHERE Id_Aprendiz = %s
+                   ORDER BY Fecha_Solicitud DESC""",
+                (id_aprendiz,)
+            )
+            return cur.fetchall()
+    except Exception as e:
+        print(f"[DB ERROR] {e}")
+        return []
+    finally:
+        if conn:
+            conn.close()
+
+
+def obtener_solicitudes_pendientes():
+    """Devuelve todas las solicitudes de salida pendientes de aprobacion, con el nombre del aprendiz.
+    (No se filtra por instructor: el proyecto aun no tiene una asignacion instructor-ficha
+    en el codigo, igual que en lista_asistencia(); todos los instructores ven todas las fichas)."""
+    conn = None
+    try:
+        conn = get_db()
+        with conn.cursor() as cur:
+            cur.execute(
+                """SELECT p.Id_Permiso, p.Fecha, p.Hora_Solicitada, p.Motivo, p.Fecha_Solicitud,
+                          CONCAT(u.Nombre, ' ', u.Apellidos) AS aprendiz
+                   FROM permiso_salida p
+                   JOIN usuario u ON u.Id_Usuario = p.Id_Aprendiz
+                   WHERE p.Estado = 'Pendiente'
+                   ORDER BY p.Fecha_Solicitud ASC"""
+            )
+            return cur.fetchall()
+    except Exception as e:
+        print(f"[DB ERROR] {e}")
+        return []
+    finally:
+        if conn:
+            conn.close()
+
+
+def responder_solicitud_salida(id_permiso, id_instructor, nuevo_estado):
+    """Aprueba o rechaza una solicitud de salida anticipada (APR-005 #2).
+    nuevo_estado debe ser 'Aprobado' o 'Rechazado'. Ademas de actualizar el
+    estado, crea una notificacion para el aprendiz dueño de la solicitud."""
+    if nuevo_estado not in ('Aprobado', 'Rechazado'):
+        return {"ok": False, "message": "Estado invalido."}
+
+    conn = None
+    try:
+        conn = get_db()
+        with conn.cursor() as cur:
+            cur.execute(
+                """UPDATE permiso_salida
+                   SET Estado = %s, Id_Instructor = %s, Fecha_Respuesta = %s
+                   WHERE Id_Permiso = %s AND Estado = 'Pendiente'""",
+                (nuevo_estado, id_instructor, datetime.now(), id_permiso)
+            )
+
+            if cur.rowcount == 0:
+                conn.commit()
+                return {"ok": False, "message": "La solicitud ya fue procesada o no existe."}
+
+            # Recuperamos el aprendiz dueño de la solicitud para poder notificarlo
+            cur.execute(
+                "SELECT Id_Aprendiz, Hora_Solicitada FROM permiso_salida WHERE Id_Permiso = %s",
+                (id_permiso,)
+            )
+            solicitud = cur.fetchone()
+            conn.commit()
+
+        # La notificacion se crea en su propia conexion/transaccion (crear_notificacion
+        # abre y cierra su propia conexion), asi que un fallo aqui no revierte la
+        # aprobacion/rechazo que ya quedo guardada arriba.
+        if solicitud:
+            mensaje = (
+                f"Tu solicitud de salida anticipada de las {solicitud['Hora_Solicitada']} "
+                f"fue {nuevo_estado.lower()}."
+            )
+            crear_notificacion(solicitud['Id_Aprendiz'], mensaje, enlace='/aprendiz/permisos')
+
+        return {"ok": True, "message": f"Solicitud {nuevo_estado.lower()} correctamente."}
+    except Exception as e:
+        print(f"[DB ERROR] {e}")
+        if conn:
+            conn.rollback()
+        return {"ok": False, "message": "Ocurrio un error al procesar la solicitud."}
+    finally:
+        if conn:
+            conn.close()
+
+
+def crear_notificacion(id_usuario, mensaje, enlace=None):
+    """Crea una notificacion en el buzon de un usuario (usada por APR-005 #2
+    para avisarle al aprendiz que su permiso fue aprobado o rechazado)."""
+    conn = None
+    try:
+        conn = get_db()
+        with conn.cursor() as cur:
+            cur.execute(
+                """INSERT INTO notificaciones (Id_Usuario, Mensaje, Enlace)
+                   VALUES (%s, %s, %s)""",
+                (id_usuario, mensaje, enlace)
+            )
+            conn.commit()
+            return True
+    except Exception as e:
+        print(f"[DB ERROR] {e}")
+        if conn:
+            conn.rollback()
+        return False
+    finally:
+        if conn:
+            conn.close()
+
+
+def obtener_notificaciones(id_usuario, limite=8):
+    """Devuelve las notificaciones mas recientes de un usuario (para la campanita)."""
+    conn = None
+    try:
+        conn = get_db()
+        with conn.cursor() as cur:
+            cur.execute(
+                """SELECT Id_Notificacion, Mensaje, Enlace, Leida, Fecha_Creacion
+                   FROM notificaciones
+                   WHERE Id_Usuario = %s
+                   ORDER BY Fecha_Creacion DESC
+                   LIMIT %s""",
+                (id_usuario, limite)
+            )
+            return cur.fetchall()
+    except Exception as e:
+        print(f"[DB ERROR] {e}")
+        return []
+    finally:
+        if conn:
+            conn.close()
+
+
+def contar_notificaciones_no_leidas(id_usuario):
+    """Cuenta las notificaciones sin leer de un usuario, para el badge de la campanita."""
+    conn = None
+    try:
+        conn = get_db()
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT COUNT(*) AS total FROM notificaciones WHERE Id_Usuario = %s AND Leida = 0",
+                (id_usuario,)
+            )
+            fila = cur.fetchone()
+            return fila['total'] if fila else 0
+    except Exception as e:
+        print(f"[DB ERROR] {e}")
+        return 0
+    finally:
+        if conn:
+            conn.close()
+
+
+def marcar_notificaciones_leidas(id_usuario):
+    """Marca como leidas todas las notificaciones pendientes de un usuario."""
+    conn = None
+    try:
+        conn = get_db()
+        with conn.cursor() as cur:
+            cur.execute(
+                "UPDATE notificaciones SET Leida = 1 WHERE Id_Usuario = %s AND Leida = 0",
+                (id_usuario,)
+            )
+            conn.commit()
+            return True
+    except Exception as e:
+        print(f"[DB ERROR] {e}")
+        if conn:
+            conn.rollback()
+        return False
+    finally:
+        if conn:
+            conn.close()
+
+
+def obtener_fallas_pendientes(id_usuario):
+    """Devuelve las fechas de las fallas del aprendiz que todavia no tienen
+    un soporte cargado (para llenar el select del formulario, APR-006)."""
+    conn = None
+    try:
+        conn = get_db()
+        with conn.cursor() as cur:
+            cur.execute(
+                """SELECT Fecha_Requerida FROM asistencia
+                   WHERE Id_Usuario = %s AND Estado = 'Falla' AND Soporte_Justificacion IS NULL
+                   ORDER BY Fecha_Requerida DESC""",
+                (id_usuario,)
+            )
+            return cur.fetchall()
+    except Exception as e:
+        print(f"[DB ERROR] {e}")
+        return []
+    finally:
+        if conn:
+            conn.close()
+
+
+def obtener_soportes_cargados(id_usuario, limite=10):
+    """Devuelve las fallas del aprendiz que ya tienen un soporte de
+    justificacion cargado, mas recientes primero (APR-006)."""
+    conn = None
+    try:
+        conn = get_db()
+        with conn.cursor() as cur:
+            cur.execute(
+                """SELECT Fecha_Requerida, Soporte_Justificacion, Fecha_Carga_Soporte
+                   FROM asistencia
+                   WHERE Id_Usuario = %s AND Soporte_Justificacion IS NOT NULL
+                   ORDER BY Fecha_Carga_Soporte DESC
+                   LIMIT %s""",
+                (id_usuario, limite)
+            )
+            return cur.fetchall()
+    except Exception as e:
+        print(f"[DB ERROR] {e}")
+        return []
+    finally:
+        if conn:
+            conn.close()
+
+
+def guardar_soporte_falla(id_usuario, fecha_requerida, ruta_archivo):
+    """Vincula la ruta del PDF cargado al registro de falta correspondiente
+    (APR-006 #1). Solo actualiza si esa fecha en verdad es una Falla del
+    aprendiz, para que no se pueda "justificar" una fecha que no le pertenece."""
+    conn = None
+    try:
+        conn = get_db()
+        with conn.cursor() as cur:
+            cur.execute(
+                """UPDATE asistencia
+                   SET Soporte_Justificacion = %s, Fecha_Carga_Soporte = %s
+                   WHERE Id_Usuario = %s AND Fecha_Requerida = %s AND Estado = 'Falla'""",
+                (ruta_archivo, datetime.now(), id_usuario, fecha_requerida)
+            )
+            conn.commit()
+            if cur.rowcount == 0:
+                return {"ok": False, "message": "No se encontro una falta pendiente para esa fecha."}
+            return {"ok": True, "message": "Soporte cargado y vinculado correctamente a tu falta."}
+    except Exception as e:
+        print(f"[DB ERROR] {e}")
+        if conn:
+            conn.rollback()
+        return {"ok": False, "message": "Ocurrio un error al guardar el soporte."}
+    finally:
+        if conn:
+            conn.close()
