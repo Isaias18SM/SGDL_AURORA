@@ -290,8 +290,6 @@ def registrar_usuario():
     return redirect(url_for('coordinador.formulario_coordinador'))
 
 
-<<<<<<< HEAD
-=======
 @coordinador.route('/coordinador/ficha-manual', methods=['POST'])
 @solo_rol('coordinador')
 def ficha_manual():
@@ -337,7 +335,6 @@ def ficha_manual():
     return redirect(url_for('coordinador.formulario_ficha'))
 
 
->>>>>>> creacion_fichas
 @coordinador.route('/coordinador/aprendices-masivo', methods=['POST'])
 @solo_rol('coordinador')
 def aprendices_masivo():
