@@ -67,6 +67,7 @@ def novedades():
 def historial():
     return render_template('historial.html', active_page='historial')
 
+
 @instructor_bp.route('/configuracion', methods=['GET', 'POST'])
 @login_requerido
 def configuracion():

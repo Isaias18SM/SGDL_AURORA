@@ -15,6 +15,10 @@ app.register_blueprint(instructor_bp)
 app.register_blueprint(aprendiz_bp)
 app.register_blueprint(coordinador) 
 app.register_blueprint(api_bp)
+app.register_blueprint(coordinador)
+app.register_blueprint(fichas_bp)
+app.register_blueprint(api_bp)  # <- faltaba esta línea, por eso /api/fichas y /api/buscar-aprendiz daban 404
+
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
     

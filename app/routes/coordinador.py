@@ -79,8 +79,8 @@ def formulario_coordinador():
 @coordinador.route('/coordinador/aprendiz-manual', methods=['POST'])
 @solo_rol('coordinador')
 def aprendiz_manual():
-    nombres = request.form.get('nombres', '').strip()
-    apellidos = request.form.get('apellidos', '').strip()
+    nombres = request.form.get('nombres', '').strip().title()
+    apellidos = request.form.get('apellidos', '').strip().title()
     tipo_doc = request.form.get('tipo_documento', '').strip()
     num_doc = request.form.get('numero_documento', '').strip()
     correo = request.form.get('correo', '').strip().lower()
