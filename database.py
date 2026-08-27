@@ -1,6 +1,6 @@
 import pymysql
 import pymysql.cursors
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 
 
 def get_db():
@@ -110,17 +110,12 @@ def obtener_aprendices_por_ficha(no_ficha, fecha=None):
 
 
 def obtener_historial_asistencia(id_usuario, fecha=None, estado=None):
-    """Devuelve el historial de asistencia de un aprendiz, opcionalmente
-    filtrado por fecha exacta y/o estado."""
+    """Devuelve el historial de asistencia de un aprendiz, con filtros opcionales de fecha y estado."""
     conn = None
     try:
         conn = get_db()
         with conn.cursor() as cur:
-            sql = """
-                SELECT Id_Asistencia, Fecha_Requerida, HoraRegistro, Estado
-                FROM asistencia
-                WHERE Id_Usuario = %s
-            """
+            sql = "SELECT Fecha_Requerida, Estado FROM asistencia WHERE Id_Usuario = %s"
             params = [id_usuario]
 
             if fecha:
@@ -131,7 +126,7 @@ def obtener_historial_asistencia(id_usuario, fecha=None, estado=None):
                 sql += " AND Estado = %s"
                 params.append(estado)
 
-            sql += " ORDER BY Fecha_Requerida DESC, HoraRegistro DESC"
+            sql += " ORDER BY Fecha_Requerida DESC"
 
             cur.execute(sql, tuple(params))
             return cur.fetchall()
@@ -143,42 +138,44 @@ def obtener_historial_asistencia(id_usuario, fecha=None, estado=None):
             conn.close()
 
 
+UMBRAL_RIESGO_ASISTENCIA = 80  # % minimo de asistencia antes de alertar riesgo academico
+
+
 def calcular_resumen_asistencia(id_usuario):
-    """Calcula totales de asistencia (presentes, fallas, retardos, excusas)
-    y el porcentaje de asistencia de un aprendiz."""
+    """Calcula presentes/fallas/excusas/retardos, el % de asistencia acumulado y si el
+    aprendiz esta en riesgo academico por inasistencia excesiva (criterio APR-003 #14)."""
     conn = None
+    filas = []
     try:
         conn = get_db()
         with conn.cursor() as cur:
-            cur.execute("""
-                SELECT
-                    COUNT(*) AS total,
-                    SUM(CASE WHEN Estado = 'Presente' THEN 1 ELSE 0 END) AS presentes,
-                    SUM(CASE WHEN Estado = 'Falla' THEN 1 ELSE 0 END) AS fallas,
-                    SUM(CASE WHEN Estado = 'Retardo' THEN 1 ELSE 0 END) AS retardos,
-                    SUM(CASE WHEN Estado = 'Excusa' THEN 1 ELSE 0 END) AS excusas
-                FROM asistencia
-                WHERE Id_Usuario = %s
-            """, (id_usuario,))
-            fila = cur.fetchone() or {}
+            cur.execute(
+                "SELECT Estado, COUNT(*) AS total FROM asistencia WHERE Id_Usuario = %s GROUP BY Estado",
+                (id_usuario,)
+            )
+            filas = cur.fetchall()
     except Exception as e:
         print(f"[DB ERROR] {e}")
-        fila = {}
     finally:
         if conn:
             conn.close()
 
-    total = fila.get('total') or 0
-    presentes = fila.get('presentes') or 0
-    porcentaje = round((presentes / total) * 100, 1) if total else 0
+    conteo = {fila['Estado']: fila['total'] for fila in filas}
+    total_registros = sum(conteo.values())
+    presentes = conteo.get('Presente', 0)
+
+    porcentaje = round((presentes / total_registros) * 100, 1) if total_registros > 0 else 100.0
+    en_riesgo = porcentaje < UMBRAL_RIESGO_ASISTENCIA
 
     return {
-        'total': total,
-        'presentes': presentes,
-        'fallas': fila.get('fallas') or 0,
-        'retardos': fila.get('retardos') or 0,
-        'excusas': fila.get('excusas') or 0,
-        'porcentaje': porcentaje
+        "porcentaje": porcentaje,
+        "total_registros": total_registros,
+        "presentes": presentes,
+        "fallas": conteo.get('Falla', 0),
+        "excusas": conteo.get('Excusa', 0),
+        "retardos": conteo.get('Retardo', 0),
+        "en_riesgo": en_riesgo,
+        "umbral": UMBRAL_RIESGO_ASISTENCIA
     }
 
 
@@ -242,76 +239,6 @@ def actualizar_perfil_usuario(id_usuario, nombre_completo, correo):
     finally:
         if conn:
             conn.close()
-
-
-UMBRAL_RIESGO_ASISTENCIA = 80  # % minimo de asistencia antes de alertar riesgo academico
-
-
-def obtener_historial_asistencia(id_usuario, fecha=None, estado=None):
-    """Devuelve el historial de asistencia de un aprendiz, con filtros opcionales de fecha y estado."""
-    conn = None
-    try:
-        conn = get_db()
-        with conn.cursor() as cur:
-            sql = "SELECT Fecha_Requerida, Estado FROM asistencia WHERE Id_Usuario = %s"
-            params = [id_usuario]
-
-            if fecha:
-                sql += " AND Fecha_Requerida = %s"
-                params.append(fecha)
-
-            if estado and estado != 'Todos los Estados':
-                sql += " AND Estado = %s"
-                params.append(estado)
-
-            sql += " ORDER BY Fecha_Requerida DESC"
-
-            cur.execute(sql, tuple(params))
-            return cur.fetchall()
-    except Exception as e:
-        print(f"[DB ERROR] {e}")
-        return []
-    finally:
-        if conn:
-            conn.close()
-
-
-def calcular_resumen_asistencia(id_usuario):
-    """Calcula presentes/fallas/excusas/retardos, el % de asistencia acumulado y si el
-    aprendiz esta en riesgo academico por inasistencia excesiva (criterio APR-003 #14)."""
-    conn = None
-    filas = []
-    try:
-        conn = get_db()
-        with conn.cursor() as cur:
-            cur.execute(
-                "SELECT Estado, COUNT(*) AS total FROM asistencia WHERE Id_Usuario = %s GROUP BY Estado",
-                (id_usuario,)
-            )
-            filas = cur.fetchall()
-    except Exception as e:
-        print(f"[DB ERROR] {e}")
-    finally:
-        if conn:
-            conn.close()
-
-    conteo = {fila['Estado']: fila['total'] for fila in filas}
-    total_registros = sum(conteo.values())
-    presentes = conteo.get('Presente', 0)
-
-    porcentaje = round((presentes / total_registros) * 100, 1) if total_registros > 0 else 100.0
-    en_riesgo = porcentaje < UMBRAL_RIESGO_ASISTENCIA
-
-    return {
-        "porcentaje": porcentaje,
-        "total_registros": total_registros,
-        "presentes": presentes,
-        "fallas": conteo.get('Falla', 0),
-        "excusas": conteo.get('Excusa', 0),
-        "retardos": conteo.get('Retardo', 0),
-        "en_riesgo": en_riesgo,
-        "umbral": UMBRAL_RIESGO_ASISTENCIA
-    }
 
 
 def crear_solicitud_salida(id_aprendiz, motivo, hora_solicitada):
@@ -522,6 +449,112 @@ def marcar_notificaciones_leidas(id_usuario):
     finally:
         if conn:
             conn.close()
+
+
+MINUTOS_RECORDATORIO_SESION = 15  # APR-009: ventana de aviso antes del inicio de la sesion
+
+
+def obtener_sesiones_hoy(id_usuario):
+    """APR-009: devuelve las sesiones (asignaciones) programadas para HOY para
+    este aprendiz, segun su ficha/asignacion dentro del trimestre vigente.
+    Lista vacia si no tiene ninguna programada para hoy (criterio #2)."""
+    conn = None
+    try:
+        conn = get_db()
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT a.ID_ASIGNACION, a.HORA_INICIO, a.HORA_FINALIZACION
+                FROM asignacion a
+                JOIN usuario_ficha_asignacion ufa ON ufa.ID_ASIGNACION = a.ID_ASIGNACION
+                JOIN trimestre t ON t.Id_Trimestre = a.Id_Trimestre
+                WHERE ufa.Id_Usuario = %s
+                  AND CURDATE() BETWEEN t.Fecha_Inicio AND t.Fecha_Fin
+                ORDER BY a.HORA_INICIO ASC
+            """, (id_usuario,))
+            return cur.fetchall()
+    except Exception as e:
+        print(f"[DB ERROR] {e}")
+        return []
+    finally:
+        if conn:
+            conn.close()
+
+
+def ya_registro_asistencia_hoy(id_usuario):
+    """APR-009: True si el aprendiz ya tiene un registro de asistencia (de
+    cualquier estado) para hoy, para no mandarle el recordatorio si ya
+    marco su asistencia."""
+    conn = None
+    try:
+        conn = get_db()
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT 1 FROM asistencia WHERE Id_Usuario = %s AND Fecha_Requerida = CURDATE() LIMIT 1",
+                (id_usuario,)
+            )
+            return cur.fetchone() is not None
+    except Exception as e:
+        print(f"[DB ERROR] {e}")
+        return False
+    finally:
+        if conn:
+            conn.close()
+
+
+def _minutos_desde_medianoche(valor_hora):
+    """Normaliza una columna TIME de MySQL a minutos desde medianoche.
+    pymysql devuelve columnas TIME como timedelta; lo cubrimos junto con
+    time/datetime por si el driver cambia de comportamiento."""
+    if isinstance(valor_hora, timedelta):
+        return valor_hora.seconds // 60
+    return valor_hora.hour * 60 + valor_hora.minute
+
+
+def generar_recordatorio_sesion_si_corresponde(id_usuario):
+    """APR-009: si el aprendiz tiene una sesion programada para hoy y faltan
+    <= MINUTOS_RECORDATORIO_SESION minutos para que inicie, le crea UNA
+    notificacion en su buzon recordandole registrar su asistencia (criterio #1).
+    No hace nada si: no tiene sesiones hoy (criterio #2), ya registro
+    asistencia hoy, o ya se le mando el recordatorio para esa sesion."""
+    sesiones = obtener_sesiones_hoy(id_usuario)
+    if not sesiones:
+        return  # criterio #2: sin sesiones programadas, no se genera recordatorio
+
+    if ya_registro_asistencia_hoy(id_usuario):
+        return
+
+    ahora_minutos = datetime.now().hour * 60 + datetime.now().minute
+
+    for sesion in sesiones:
+        inicio_minutos = _minutos_desde_medianoche(sesion['HORA_INICIO'])
+        faltan = inicio_minutos - ahora_minutos
+
+        if 0 <= faltan <= MINUTOS_RECORDATORIO_SESION:
+            enlace = f"recordatorio-sesion-{sesion['ID_ASIGNACION']}-{date.today().isoformat()}"
+
+            conn = None
+            try:
+                conn = get_db()
+                with conn.cursor() as cur:
+                    cur.execute(
+                        "SELECT 1 FROM notificaciones WHERE Id_Usuario = %s AND Enlace = %s LIMIT 1",
+                        (id_usuario, enlace)
+                    )
+                    ya_avisado = cur.fetchone() is not None
+            except Exception as e:
+                print(f"[DB ERROR] {e}")
+                ya_avisado = True  # ante la duda, no duplicamos el aviso
+            finally:
+                if conn:
+                    conn.close()
+
+            if not ya_avisado:
+                crear_notificacion(
+                    id_usuario,
+                    f"Tu sesión inicia en {faltan} minuto(s). Recuerda registrar tu asistencia.",
+                    enlace
+                )
+            break  # ya evaluamos la sesion mas proxima; no seguimos con las demas
 
 
 def obtener_fallas_pendientes(id_usuario):

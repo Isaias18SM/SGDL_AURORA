@@ -21,7 +21,8 @@ from database import (
     marcar_notificaciones_leidas,
     obtener_fallas_pendientes,
     obtener_soportes_cargados,
-    guardar_soporte_falla
+    guardar_soporte_falla,
+    generar_recordatorio_sesion_si_corresponde
 )
 
 aprendiz_bp = Blueprint('aprendiz', __name__)
@@ -107,6 +108,9 @@ def inyectar_notificaciones():
     base_aprendiz.html, sin tener que pasarlas manualmente en cada vista.
     Se ejecuta en cada request atendido por este blueprint."""
     if 'id' in session and session.get('rol') == 'aprendiz':
+        # APR-009: en cada visita revisa si hay una sesion por iniciar y,
+        # si corresponde, genera el recordatorio en el buzon de notificaciones.
+        generar_recordatorio_sesion_si_corresponde(session['id'])
         return dict(
             notif_no_leidas=contar_notificaciones_no_leidas(session['id']),
             notif_recientes=obtener_notificaciones(session['id'])
