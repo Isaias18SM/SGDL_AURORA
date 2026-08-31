@@ -199,7 +199,7 @@ def obtener_asistencias_aprendiz(id_usuario, fecha_inicio, fecha_fin):
                     Estado AS estado
                 FROM asistencia
                 WHERE Id_Usuario = %s
-                  AND Fecha_Requerida BETWEEN %s AND %s
+                    AND Fecha_Requerida BETWEEN %s AND %s
                 ORDER BY Fecha_Requerida ASC
             """, (id_usuario, fecha_inicio, fecha_fin))
             return cur.fetchall()

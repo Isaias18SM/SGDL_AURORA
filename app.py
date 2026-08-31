@@ -13,7 +13,7 @@ app.secret_key = 'aurora_sena_secret_2026'
 app.register_blueprint(auth_bp)
 app.register_blueprint(instructor_bp)
 app.register_blueprint(aprendiz_bp)
-app.register_blueprint(coordinador) 
+app.register_blueprint(coordinador)
 app.register_blueprint(api_bp)
 app.register_blueprint(coordinador)
 app.register_blueprint(fichas_bp)
