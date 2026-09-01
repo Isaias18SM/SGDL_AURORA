@@ -9,7 +9,10 @@ from database import (
     obtener_aprendices_por_ficha,
     actualizar_perfil_usuario,
     obtener_solicitudes_pendientes,
-    responder_solicitud_salida
+    responder_solicitud_salida,
+    crear_circular,
+    obtener_circulares_recientes,
+    obtener_soportes_para_revision 
 )
 
 instructor_bp = Blueprint('instructor', __name__)
@@ -68,11 +71,26 @@ def modulos():
     return render_template('modulos.html', active_page='reportes')
 
 
-@instructor_bp.route('/novedades')
+@instructor_bp.route('/novedades', methods=['GET', 'POST'])
 @solo_rol('instructor', 'coordinador')
 def novedades():
-    return render_template('novedades.html', active_page='novedades')
+    mensaje = None
+    if request.method == 'POST':
+        titulo = request.form.get('titulo', '').strip()
+        cuerpo = request.form.get('mensaje', '').strip()
 
+        if not titulo or not cuerpo:
+            mensaje = ('error', 'Debes indicar el título y el mensaje de la circular.')
+        else:
+            resultado = crear_circular(session['id'], titulo, cuerpo)
+            mensaje = ('exito', resultado['message']) if resultado['ok'] else ('error', resultado['message'])
+
+    return render_template(
+        'novedades.html',
+        active_page='novedades',
+        circulares=obtener_circulares_recientes(20),
+        soportes=obtener_soportes_para_revision(),
+        mensaje=mensaje)
 
 @instructor_bp.route('/historial')
 @solo_rol('instructor', 'coordinador')

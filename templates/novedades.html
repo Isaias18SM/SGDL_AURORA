@@ -6,50 +6,75 @@
     <h2>NOVEDADES Y ALERTAS</h2>
     <p style="color: var(--text-muted);">Revisa las solicitudes de justificación y alertas críticas del sistema.</p>
 </div>
+{% if mensaje %}
+    {% set tipo, texto = mensaje %}
+    <div class="card" style="margin-bottom: 20px;
+              {% if tipo == 'exito' %}background: rgba(22,163,74,0.12); color: var(--primary);
+              {% else %}background: rgba(220,38,38,0.12); color: var(--danger);{% endif %}">
+        {{ texto }}
+    </div>
+{% endif %}
 
-<div class="card">
+<div class="card" style="margin-top: 20px;">
+    <h3>Publicar Nueva Circular</h3>
+    <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 20px;">
+        Este mensaje será visible para todos los aprendices en su sección de novedades.
+    </p>
+
+    <form method="POST" action="{{ url_for('instructor.novedades') }}" style="display: flex; flex-direction: column; gap: 15px;">
+        <div>
+            <label style="display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 5px;">Título</label>
+            <input type="text" name="titulo" required
+                   style="width: 100%; background: var(--bg-main); border: 1px solid var(--border-color); padding: 10px; border-radius: 6px; color: var(--text-white);">
+        </div>
+        <div>
+            <label style="display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 5px;">Mensaje</label>
+            <textarea name="mensaje" rows="4" required
+                      style="width: 100%; background: var(--bg-main); border: 1px solid var(--border-color); padding: 10px; border-radius: 6px; color: var(--text-white); resize: vertical;"></textarea>
+        </div>
+        <button type="submit"
+                style="background: var(--primary); border: none; padding: 12px; border-radius: 6px; font-weight: bold; cursor: pointer; color: var(--bg-main); align-self: flex-start; padding-left: 24px; padding-right: 24px;">
+            Publicar Circular
+        </button>
+    </form>
+</div>
+<div class="card" style="margin-top: 20px;">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-        <h3>Buzón de Notificaciones</h3>
-        <span id="badgePendientes" class="badge badge-falla" style="border-radius: 6px;">{{ pendientes }} Pendientes</span>
+        <h3>Soportes de Justificación Recibidos</h3>
+        <span class="badge badge-presente" style="border-radius: 6px;">{{ soportes|length }} Cargados</span>
     </div>
 
     <table class="custom-table">
         <thead>
             <tr>
                 <th>Aprendiz</th>
-                <th>Tipo</th>
-                <th>Detalles de la Novedad</th>
-                <th>Tiempo</th>
-                <th style="text-align: right;">Acciones</th>
+                <th>Ficha</th>
+                <th>Fecha de la Falla</th>
+                <th>Documento</th>
+                <th>Cargado</th>
             </tr>
         </thead>
         <tbody>
-            {% for n in novedades %}
-            <tr data-id="{{ n.id }}" data-estado="{{ n.estado }}">
-                <td><strong>{{ n.aprendiz }}</strong></td>
-                <td><span class="badge {{ n.badge }}">{{ n.tipo }}</span></td>
-                <td style="color: var(--text-muted);">{{ n.detalle }}</td>
-                <td>{{ n.tiempo }}</td>
-                <td style="text-align: right;">
-                    <button type="button" class="btn-accion-novedad"
-                            style="background: rgba(22, 163, 74, 0.1); border: 1px solid var(--primary); color: var(--primary); padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 0.85rem; margin-right: 5px;"
-                            {% if n.estado != 'pendiente' %}disabled{% endif %}>
-                        {{ 'Resuelto' if n.estado != 'pendiente' else n.accion_label }}
-                    </button>
-                    <button type="button" style="background: transparent; border: 1px solid var(--border-color); color: var(--text-white); padding: 6px; border-radius: 4px; cursor: pointer;">
-                        <i class="ph ph-dots-three-vertical"></i>
-                    </button>
+            {% for s in soportes %}
+            <tr>
+                <td><strong>{{ s.aprendiz }}</strong></td>
+                <td>{{ s.ficha or '-' }}</td>
+                <td>{{ s.Fecha_Requerida.strftime('%d/%m/%Y') if s.Fecha_Requerida else '-' }}</td>
+                <td>
+                    <a href="{{ url_for('static', filename=s.Soporte_Justificacion) }}" target="_blank" style="color: var(--info); text-decoration: none;">
+                        <i class="ph ph-file-pdf"></i> Ver PDF
+                    </a>
                 </td>
+                <td>{{ s.Fecha_Carga_Soporte.strftime('%d/%m/%Y %H:%M') if s.Fecha_Carga_Soporte else '-' }}</td>
             </tr>
             {% else %}
             <tr>
-                <td colspan="5" style="text-align:center; color: var(--text-muted);">No hay novedades pendientes.</td>
+                <td colspan="5" style="text-align:center; color: var(--text-muted);">Aún no hay soportes cargados por los aprendices.</td>
             </tr>
             {% endfor %}
         </tbody>
     </table>
 </div>
-
 <script>
     document.querySelectorAll('.btn-accion-novedad').forEach(btn => {
         btn.addEventListener('click', async () => {

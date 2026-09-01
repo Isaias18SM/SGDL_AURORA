@@ -10,6 +10,7 @@ from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib.units import cm
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
 from decorators import solo_rol
+
 from database import (
     get_db,
     obtener_historial_asistencia,
@@ -22,7 +23,8 @@ from database import (
     obtener_fallas_pendientes,
     obtener_soportes_cargados,
     guardar_soporte_falla,
-    generar_recordatorio_sesion_si_corresponde
+    generar_recordatorio_sesion_si_corresponde,
+    obtener_circulares_recientes   # <-- nuevo
 )
 
 aprendiz_bp = Blueprint('aprendiz', __name__)
@@ -189,6 +191,7 @@ def novedades_aprendiz():
         active_page='novedades',
         fallas_pendientes=obtener_fallas_pendientes(session['id']),
         soportes_cargados=obtener_soportes_cargados(session['id']),
+        circulares=obtener_circulares_recientes(5),   # <-- nuevo
         mensaje=mensaje
     )
 

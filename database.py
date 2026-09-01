@@ -629,3 +629,100 @@ def guardar_soporte_falla(id_usuario, fecha_requerida, ruta_archivo):
     finally:
         if conn:
             conn.close()
+def crear_circular(id_usuario, titulo, cuerpo):
+    """Crea una nueva circular/novedad publicada por un instructor o coordinador."""
+    conn = None
+    try:
+        conn = get_db()
+        with conn.cursor() as cur:
+            cur.execute(
+                """INSERT INTO circular (Id_Usuario, Titulo, Cuerpo, Fecha_Creacion)
+                   VALUES (%s, %s, %s, %s)""",
+                (id_usuario, titulo, cuerpo, datetime.now())
+            )
+            conn.commit()
+            return {"ok": True, "message": "Circular publicada correctamente."}
+    except Exception as e:
+        print(f"[DB ERROR] {e}")
+        if conn:
+            conn.rollback()
+        return {"ok": False, "message": "Ocurrió un error al publicar la circular."}
+    finally:
+        if conn:
+            conn.close()
+
+
+def crear_circular(id_usuario, titulo, cuerpo):
+    """Crea una nueva circular/novedad publicada por un instructor o coordinador."""
+    conn = None
+    try:
+        conn = get_db()
+        with conn.cursor() as cur:
+            cur.execute(
+                """INSERT INTO circular (Id_Autor, Titulo, Mensaje, Fecha_Publicacion)
+                   VALUES (%s, %s, %s, %s)""",
+                (id_usuario, titulo, cuerpo, datetime.now())
+            )
+            conn.commit()
+            return {"ok": True, "message": "Circular publicada correctamente."}
+    except Exception as e:
+        print(f"[DB ERROR] {e}")
+        if conn:
+            conn.rollback()
+        return {"ok": False, "message": "Ocurrió un error al publicar la circular."}
+    finally:
+        if conn:
+            conn.close()
+
+
+def obtener_circulares_recientes(limite=20):
+    """Devuelve las circulares más recientes, con el nombre y rol de quien las publicó."""
+    conn = None
+    try:
+        conn = get_db()
+        with conn.cursor() as cur:
+            cur.execute(
+                """SELECT c.Id_Circular, c.Titulo, c.Mensaje, c.Fecha_Publicacion,
+                          CONCAT(u.Nombre, ' ', u.Apellidos) AS autor_nombre,
+                          u.ROL AS autor_rol
+                   FROM circular c
+                   JOIN usuario u ON u.Id_Usuario = c.Id_Autor
+                   ORDER BY c.Fecha_Publicacion DESC
+                   LIMIT %s""",
+                (limite,)
+            )
+            return cur.fetchall()
+    except Exception as e:
+        print(f"[DB ERROR] {e}")
+        return []
+    finally:
+        if conn:
+            conn.close()
+
+def obtener_soportes_para_revision(limite=50):
+    """Devuelve las fallas con soporte PDF ya cargado por los aprendices,
+    para que el instructor pueda revisarlas."""
+    conn = None
+    try:
+        conn = get_db()
+        with conn.cursor() as cur:
+            cur.execute(
+                """SELECT a.Id_Usuario, CONCAT(u.Nombre, ' ', u.Apellidos) AS aprendiz,
+                          f.No_FICHA AS ficha,
+                          a.Fecha_Requerida, a.Soporte_Justificacion, a.Fecha_Carga_Soporte
+                   FROM asistencia a
+                   JOIN usuario u ON u.Id_Usuario = a.Id_Usuario
+                   LEFT JOIN usuario_ficha_asignacion ufa ON ufa.Id_Usuario = u.Id_Usuario
+                   LEFT JOIN ficha f ON f.ID_FICHA = ufa.ID_FICHA
+                   WHERE a.Soporte_Justificacion IS NOT NULL
+                   ORDER BY a.Fecha_Carga_Soporte DESC
+                   LIMIT %s""",
+                (limite,)
+            )
+            return cur.fetchall()
+    except Exception as e:
+        print(f"[DB ERROR] {e}")
+        return []
+    finally:
+        if conn:
+            conn.close()
