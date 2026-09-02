@@ -86,14 +86,14 @@
 </style>
 
 <div style="margin-bottom: 30px;">
-    <h2>APRENDICES</h2>
-    <p style="color: var(--text-muted);">Registra un aprendiz de forma individual o carga varios a la vez desde un archivo CSV.</p>
+    <h2>Registrar ficha</h2>
+    <p style="color: var(--text-muted);">Registre una ficha de forma individual.</p>
 </div>
 
 <div class="card">
     <div class="tabs">
         <button type="button" class="tab-btn active" data-tab="individual">
-            <i class="ph ph-user-plus"></i> Registro Individual
+            <i class="ph ph-user-plus"></i> Registro Individual de ficha
         </button>
 
 </div>
@@ -106,11 +106,18 @@
             </div>
             <div class="form-group">
                 <label class="form-label">Jornada</label>
-                <input type="text" name="Jornada" class="form-input" required>
+                <select name="Jornada" class="form-input">
+                    <option value="" disabled selected>Seleccione el tipo de jornada de la ficha</option>
+                    <option value="Diurna">Diurna</option>
+                    <option value="Nocturna">Nocturna</option>
+                    <option value="Virtual">Virtual</option>
+                    <option value="Mixta">Mixta</option>
+                </select>
             </div>
             <div class="form-group">
                 <label class="form-label">Tipo de ficha</label>
                 <select name="TipoFicha" class="form-input">
+                    <option value="" disabled selected>Seleccione el tipo de ficha</option>
                     <option value="Abierta">Abierta</option>
                     <option value="Cerrada">Cerrada</option>
                     <option value="Cadena">Cadena</option>
@@ -119,6 +126,7 @@
             <div class="form-group">
                 <label class="form-label">Estado de la ficha</label>
                 <select name="Vigencia" class="form-input">
+                    <option value="" disabled selected>Seleccione el estado de la ficha</option>
                     <option value="Activa">Activa</option>
                     <option value="Inactiva">Inactiva</option>
                 </select>
@@ -152,28 +160,35 @@
                     <i class="ph ph-user-plus"></i> Registrar Ficha
                 </button>
             </div>
+        </form>
 
 <div class="card" style="margin-top:20px;">
-    <h3 style="margin-bottom:15px;">Aprendices Registrados</h3>
+    <h3 style="margin-bottom:15px;">Fichas Registradas</h3>
     <table class="custom-table">
         <thead>
             <tr>
-                <th>Nombre</th>
-                <th>Documento</th>
-                <th>Ficha</th>
+                <th>Numero ficha</th>
+                <th>Jornada</th>
+                <th>Tipo ficha</th>
+                <th>Fecha de inicio</th>
+                <th>Fecha final</th>
+                <th>Nombre programa</th>
             </tr>
         </thead>
         <tbody>
-            {% for a in aprendices %}
+            {% for f in fichas %}
             <tr>
-                <td>{{ a.nombre }}</td>
-                <td>{{ a.documento }}</td>
-                <td>{{ a.ficha }}</td>
+                <td>{{ f.numero_ficha }}</td>
+                <td>{{ f.jornada }}</td>
+                <td>{{ f.tipo_ficha }}</td>
+                <td>{{ f.fecha_inicio }}</td>
+                <td>{{ f.fecha_final }}</td>
+                <td>{{ f.programa }}</td>
             </tr>
             {% else %}
             <tr>
-                <td colspan="3" style="text-align: center; color: var(--text-muted);">
-                    No hay aprendices registrados todavía.
+                <td colspan="6" style="text-align: center; color: var(--text-muted);">
+                    No hay fichas registradas por el momento.
                 </td>
             </tr>
             {% endfor %}

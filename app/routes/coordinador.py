@@ -41,7 +41,56 @@ def _obtener_aprendices():
     finally:
         conn.close()
 
+# Única función optimizada para obtener todas las fichas con su programa
+def _obtener_fichas():
+    conn = get_db()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT f.No_FICHA, f.Jornada, f.TipoDeFicha, 
+                       f.FechaInicio, f.FechaFinal, p.Nombre
+                FROM ficha f
+                LEFT JOIN programa p ON p.Id_Programa = f.Id_Programa
+            """)
+            filas = cur.fetchall()
+            return [
+                {
+                    "numero_ficha": r['No_FICHA'],
+                    "jornada": r['Jornada'],
+                    "tipo_ficha": r['TipoDeFicha'],
+                    "fecha_inicio": r['FechaInicio'],
+                    "fecha_final": r['FechaFinal'],
+                    "programa": r['Nombre'] or 'Sin programa'
+                }
+                for r in filas
+            ]
+    finally:
+        conn.close()
 
+
+def _obtener_programas():
+    conn = get_db()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("SELECT Id_Programa AS id, Nombre AS nombre FROM programa")
+            datos = cur.fetchall()
+            return datos
+    finally:
+        conn.close()
+
+
+# RUTA CORREGIDA: Ahora le enviamos tanto 'programas' como 'fichas' al HTML
+@coordinador.route('/formulario-ficha')
+@solo_rol('coordinador')
+def formulario_ficha():
+    datos_programas = _obtener_programas()
+    lista_fichas = _obtener_fichas()  # <-- Obtenemos las fichas aquí
+    return render_template(
+        'Formulario_New_Ficha.html',
+        active_page='formulario_ficha',
+        programas=datos_programas,
+        fichas=lista_fichas        # <-- Las inyectamos a la plantilla
+    )
 def _obtener_programas():
     conn = get_db()
     try:
@@ -236,15 +285,6 @@ def formulario_coordinador():
         aprendices=_obtener_aprendices()
     )
 
-
-@coordinador.route('/formulario-ficha')
-@solo_rol('coordinador')
-def formulario_ficha():
-    return render_template(
-        'Formulario_New_Ficha.html',
-        active_page='formulario_ficha',
-        programas=_obtener_programas()
-    )
 
 
 @coordinador.route('/coordinador/registrar-usuario', methods=['POST'])
