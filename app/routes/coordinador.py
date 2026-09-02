@@ -319,9 +319,9 @@ def registrar_usuario():
             if rol == 'Aprendiz':
                 cur.execute(
                     """SELECT f.ID_FICHA, ufa.ID_ASIGNACION
-                       FROM ficha f
-                       JOIN usuario_ficha_asignacion ufa ON ufa.ID_FICHA = f.ID_FICHA
-                       WHERE f.No_FICHA = %s LIMIT 1""",
+                    FROM ficha f
+                    JOIN usuario_ficha_asignacion ufa ON ufa.ID_FICHA = f.ID_FICHA
+                    WHERE f.No_FICHA = %s LIMIT 1""",
                     (no_ficha,)
                 )
                 resultado = cur.fetchone()
@@ -337,8 +337,8 @@ def registrar_usuario():
 
             cur.execute(
                 """INSERT INTO usuario
-                   (Nombre, Apellidos, No_Documento, TPI_DOCUMENTO, CORREO_SENA, CONTRASENA, ROL, Activo_SN)
-                   VALUES (%s, %s, %s, %s, %s, %s, %s, %s)""",
+                (Nombre, Apellidos, No_Documento, TPI_DOCUMENTO, CORREO_SENA, CONTRASENA, ROL, Activo_SN)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)""",
                 (nombres, apellidos, num_doc, tipo_doc, correo, clave_encriptada, rol, '1')
             )
             nuevo_id = cur.lastrowid
@@ -381,8 +381,8 @@ def ficha_manual():
         with conn.cursor() as cur:
             cur.execute(
                 """INSERT INTO ficha
-                   (No_FICHA, Jornada, TipoDeFicha, Vigencia, FechaInicio, FechaFinal, Id_Programa)
-                   VALUES (%s, %s, %s, %s, %s, %s, %s)""",
+                (No_FICHA, Jornada, TipoDeFicha, Vigencia, FechaInicio, FechaFinal, Id_Programa)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)""",
                 (NumeroFicha, Jornada, TipoFicha, Vigencia, FechaInicio, FechaFinal, Programa)
             )
 
@@ -427,9 +427,9 @@ def aprendices_masivo():
 
                     cur.execute(
                         """SELECT f.ID_FICHA, ufa.ID_ASIGNACION
-                           FROM ficha f
-                           JOIN usuario_ficha_asignacion ufa ON ufa.ID_FICHA = f.ID_FICHA
-                           WHERE f.No_FICHA = %s LIMIT 1""",
+                        FROM ficha f
+                        JOIN usuario_ficha_asignacion ufa ON ufa.ID_FICHA = f.ID_FICHA
+                        WHERE f.No_FICHA = %s LIMIT 1""",
                         (no_ficha,)
                     )
                     resultado = cur.fetchone()
