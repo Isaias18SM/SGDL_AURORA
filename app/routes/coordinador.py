@@ -1,9 +1,9 @@
 import csv
 import io
 import uuid
-from flask import Blueprint, render_template, request, redirect, url_for, flash
+from flask import Blueprint, render_template, request, redirect, url_for, flash, session, jsonify
 from decorators import solo_rol
-from database import get_db
+from database import get_db, obtener_novedades_pendientes, marcar_novedad_resuelta
 
 coordinador = Blueprint('coordinador', __name__)
 
@@ -204,7 +204,23 @@ def coordinador_desasignar_ficha():
 @coordinador.route('/novedades-coordinador')
 @solo_rol('coordinador')
 def novedades_coordinador():
-    return render_template('novedades_coordinador.html', active_page='novedades')
+    novedades = obtener_novedades_pendientes()
+    return render_template(
+        'novedades_coordinador.html',
+        active_page='novedades',
+        novedades=novedades
+    )
+
+
+@coordinador.route('/api/novedades/<int:id_novedad>/accion', methods=['POST'])
+@solo_rol('coordinador')
+def resolver_novedad(id_novedad):
+    """Llamado por fetch() desde novedades_coordinador.html para marcar una novedad como resuelta."""
+    resultado = marcar_novedad_resuelta(id_novedad, session.get('id'))
+    return jsonify({
+        'status': 'success' if resultado['ok'] else 'error',
+        'message': resultado['message']
+    })
 
 
 @coordinador.route('/historial-coordinador')

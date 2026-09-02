@@ -726,3 +726,86 @@ def obtener_soportes_para_revision(limite=50):
     finally:
         if conn:
             conn.close()
+
+
+def crear_novedad(id_instructor, titulo, mensaje, id_ficha=None, tipo='Alerta'):
+    """
+    Registra una novedad enviada por un INSTRUCTOR hacia el coordinador.
+    La validación de que quien llama sea instructor se hace en la ruta,
+    esta función solo persiste el dato.
+    """
+    conn = get_db()
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                """INSERT INTO novedad (Id_Instructor, Id_Ficha, Tipo, Titulo, Mensaje, Estado)
+                   VALUES (%s, %s, %s, %s, %s, 'Pendiente')""",
+                (id_instructor, id_ficha, tipo, titulo, mensaje)
+            )
+            conn.commit()
+        return {'ok': True, 'message': 'Novedad enviada al coordinador correctamente.'}
+    except Exception as e:
+        conn.rollback()
+        print(f"[ERROR NOVEDAD]: {e}")
+        return {'ok': False, 'message': 'No se pudo enviar la novedad.'}
+    finally:
+        conn.close()
+
+
+def obtener_novedades_pendientes():
+    """
+    Devuelve las novedades en estado 'Pendiente', con el nombre del
+    instructor que la reportó y el número de ficha (si aplica).
+    Usado por la vista del coordinador (Buzón General).
+    """
+    conn = get_db()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT n.Id_Novedad,
+                       n.Tipo,
+                       n.Titulo,
+                       n.Mensaje,
+                       n.Estado,
+                       n.Fecha_Creacion,
+                       CONCAT(u.Nombre, ' ', u.Apellidos) AS instructor,
+                       f.No_FICHA AS ficha
+                  FROM novedad n
+                  JOIN usuario u ON u.Id_Usuario = n.Id_Instructor
+             LEFT JOIN ficha f ON f.ID_FICHA = n.Id_Ficha
+                 WHERE n.Estado = 'Pendiente'
+              ORDER BY n.Fecha_Creacion DESC
+            """)
+            return cur.fetchall()
+    finally:
+        conn.close()
+
+
+def marcar_novedad_resuelta(id_novedad, id_coordinador):
+    """
+    Marca una novedad como 'Resuelto'. Solo debe invocarse desde una
+    ruta protegida con @solo_rol('coordinador').
+    """
+    conn = get_db()
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                """UPDATE novedad
+                      SET Estado = 'Resuelto',
+                          Fecha_Resolucion = NOW(),
+                          Id_Coordinador_Resuelve = %s
+                    WHERE Id_Novedad = %s AND Estado = 'Pendiente'""",
+                (id_coordinador, id_novedad)
+            )
+            filas_afectadas = cur.rowcount
+            conn.commit()
+
+        if filas_afectadas == 0:
+            return {'ok': False, 'message': 'La novedad ya fue resuelta o no existe.'}
+        return {'ok': True, 'message': 'Novedad marcada como resuelta.'}
+    except Exception as e:
+        conn.rollback()
+        print(f"[ERROR NOVEDAD]: {e}")
+        return {'ok': False, 'message': 'No se pudo actualizar la novedad.'}
+    finally:
+        conn.close()

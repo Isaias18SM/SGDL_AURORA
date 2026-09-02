@@ -10,11 +10,82 @@
 <div class="card">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
         <h3>Buzón General</h3>
-        <span class="badge badge-presente" style="border-radius: 6px;">0 Pendientes</span>
+        <span class="badge badge-presente" style="border-radius: 6px;" id="badgePendientes">{{ novedades|length }} Pendientes</span>
     </div>
+
+    {% if novedades %}
+    <table class="custom-table">
+        <thead>
+            <tr>
+                <th>Instructor</th>
+                <th>Ficha</th>
+                <th>Tipo</th>
+                <th>Título</th>
+                <th>Mensaje</th>
+                <th>Fecha</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for n in novedades %}
+            <tr data-id="{{ n.Id_Novedad }}" data-estado="pendiente">
+                <td><strong>{{ n.instructor }}</strong></td>
+                <td>{{ n.ficha or 'General' }}</td>
+                <td>{{ n.Tipo }}</td>
+                <td>{{ n.Titulo }}</td>
+                <td>{{ n.Mensaje }}</td>
+                <td>{{ n.Fecha_Creacion.strftime('%d/%m/%Y %H:%M') if n.Fecha_Creacion else '-' }}</td>
+                <td>
+                    <button class="btn-accion-novedad"
+                            style="background: var(--primary); border: none; padding: 8px 14px; border-radius: 6px; color: var(--bg-main); font-weight: bold; cursor: pointer;">
+                        Marcar resuelto
+                    </button>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
     <p style="color: var(--text-muted); font-size: 0.9rem;">
         Aún no hay novedades reportadas por los instructores. Cuando un instructor registre una
         excusa o una alerta de inasistencia en su ficha, aparecerá aquí para tu revisión.
     </p>
+    {% endif %}
 </div>
+
+<script>
+    document.querySelectorAll('.btn-accion-novedad').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            const fila = btn.closest('tr');
+            const id = fila.dataset.id;
+            const textoOriginal = btn.textContent;
+
+            btn.disabled = true;
+            btn.textContent = 'Procesando...';
+
+            try {
+                const resp = await fetch(`/api/novedades/${id}/accion`, { method: 'POST' });
+                const data = await resp.json();
+
+                if (data.status === 'success') {
+                    fila.remove();
+                    actualizarContadorPendientes();
+                } else {
+                    btn.disabled = false;
+                    btn.textContent = textoOriginal;
+                    alert(data.message || 'No se pudo procesar la novedad.');
+                }
+            } catch (err) {
+                btn.disabled = false;
+                btn.textContent = textoOriginal;
+                alert('Error al conectar con el servidor.');
+            }
+        });
+    });
+
+    function actualizarContadorPendientes() {
+        const pendientes = document.querySelectorAll('tr[data-estado="pendiente"]').length;
+        document.getElementById('badgePendientes').textContent = `${pendientes} Pendientes`;
+    }
+</script>
 {% endblock %}
