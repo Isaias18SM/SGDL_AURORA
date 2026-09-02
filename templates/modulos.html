@@ -17,20 +17,19 @@
 
 <!-- FILTROS -->
 
-<div class="card" style="margin-bottom: 20px;">
-
-    <div style="
-        display:flex;
-        gap:15px;
-        flex-wrap:wrap;
-        align-items:end;
-    ">
-
+<div class="card report-filters-card">
+    <div class="report-filters-heading">
         <div>
+            <span class="section-kicker">Panel de consulta</span>
+            <h3>Filtrar asistencia</h3>
+        </div>
+        <i class="ph ph-sliders-horizontal" aria-hidden="true"></i>
+    </div>
 
-            <label>
-                Periodo
-            </label>
+    <div class="report-filters">
+
+        <div class="report-filter-field">
+            <label for="filtroPeriodo">Periodo</label>
 
             <select id="filtroPeriodo">
 
@@ -51,11 +50,8 @@
         </div>
 
 
-        <div>
-
-            <label>
-                Año
-            </label>
+        <div class="report-filter-field">
+            <label for="filtroAnio">Año</label>
 
             <select id="filtroAnio">
 
@@ -72,11 +68,8 @@
         </div>
 
 
-        <div id="contenedorMes">
-
-            <label>
-                Mes
-            </label>
+        <div id="contenedorMes" class="report-filter-field">
+            <label for="filtroMes">Mes</label>
 
             <select id="filtroMes">
 
@@ -98,12 +91,8 @@
         </div>
 
 
-        <div id="contenedorTrimestre"
-             style="display:none;">
-
-            <label>
-                Trimestre
-            </label>
+        <div id="contenedorTrimestre" class="report-filter-field" style="display:none;">
+            <label for="filtroTrimestre">Trimestre</label>
 
             <select id="filtroTrimestre">
 
@@ -117,11 +106,8 @@
         </div>
 
 
-        <div>
-
-            <label>
-                Ficha
-            </label>
+        <div class="report-filter-field report-filter-field-wide">
+            <label for="filtroFicha">Ficha</label>
 
             <select id="filtroFicha">
 

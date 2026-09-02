@@ -24,7 +24,7 @@
         </p>
 
         <div class="welcome-actions">
-            <a href="{{ url_for('instructor.dashboard') }}" class="welcome-action">
+            <a href="{{ url_for('fichas.fichas') }}" class="welcome-action">
                 <i class="ph ph-folder"></i>
                 <span>Mis Fichas</span>
             </a>
@@ -35,6 +35,10 @@
             <a href="{{ url_for('instructor.novedades') }}" class="welcome-action">
                 <i class="ph ph-bell"></i>
                 <span>Novedades</span>
+            </a>
+            <a href="{{ url_for('instructor.permisos_instructor') }}" class="welcome-action">
+                <i class="ph ph-sign-out"></i>
+                <span>Permisos</span>
             </a>
             <a href="{{ url_for('instructor.historial') }}" class="welcome-action">
                 <i class="ph ph-clock-history"></i>

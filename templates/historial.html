@@ -7,10 +7,19 @@
         <h2>HISTORIAL DE ASISTENCIAS</h2>
         <p style="color: var(--text-muted);">Consulta las bitácoras y estados de llamados a lista anteriores.</p>
     </div>
-    <button style="background: transparent; border: 1px solid var(--border-color); color: var(--text-white); padding: 10px 15px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+    <button type="button" id="btnFiltroFecha" class="history-filter-button">
         <i class="ph ph-funnel"></i> Filtrar por Fecha
     </button>
 </div>
+
+<form method="GET" id="formFiltroFecha" class="history-filter-form" hidden>
+    <label for="fechaFiltro">Fecha del reporte</label>
+    <input type="date" id="fechaFiltro" name="fecha" value="{{ fecha_filtro }}" required>
+    <button type="submit" class="btn-primary"><i class="ph ph-check"></i> Aplicar</button>
+    {% if fecha_filtro %}
+    <a href="{{ url_for('instructor.historial') }}" class="history-clear-filter">Limpiar filtro</a>
+    {% endif %}
+</form>
 
 <div class="card">
     <table class="custom-table">
@@ -26,34 +35,37 @@
             </tr>
         </thead>
         <tbody>
+            {% for registro in historial %}
             <tr>
-                <td><strong>09/05/2026</strong></td>
-                <td>2557908 - ADSO</td>
-                <td style="color: var(--primary); font-weight: 600;">32</td>
-                <td style="color: var(--danger);">2</td>
-                <td style="color: var(--warning);">1</td>
+                <td><strong>{{ registro.fecha.strftime('%d/%m/%Y') }}</strong></td>
+                <td>{{ registro.ficha }} - {{ registro.programa }}</td>
+                <td style="color: var(--primary); font-weight: 600;">{{ registro.asistieron }}</td>
+                <td style="color: var(--danger);">{{ registro.fallas }}</td>
+                <td style="color: var(--warning);">{{ registro.excusas }}</td>
                 <td><span class="badge badge-presente" style="padding: 4px 8px; font-size: 0.75rem;">Guardado</span></td>
-                <td style="text-align: right;"><a href="#" style="color: var(--info); text-decoration: none;"><i class="ph ph-download-simple" style="font-size: 1.2rem;"></i></a></td>
+                <td style="text-align: right;">
+                    <a href="{{ url_for('instructor.descargar_historial', id_ficha=registro.id_ficha, fecha=registro.fecha.isoformat()) }}" title="Descargar reporte" style="color: var(--info); text-decoration: none;">
+                        <i class="ph ph-download-simple" style="font-size: 1.2rem;"></i>
+                    </a>
+                </td>
             </tr>
+            {% else %}
             <tr>
-                <td><strong>08/05/2026</strong></td>
-                <td>2557908 - ADSO</td>
-                <td style="color: var(--primary); font-weight: 600;">30</td>
-                <td style="color: var(--danger);">5</td>
-                <td style="color: var(--warning);">0</td>
-                <td><span class="badge badge-presente" style="padding: 4px 8px; font-size: 0.75rem;">Guardado</span></td>
-                <td style="text-align: right;"><a href="#" style="color: var(--info); text-decoration: none;"><i class="ph ph-download-simple" style="font-size: 1.2rem;"></i></a></td>
+                <td colspan="7" style="text-align: center; color: var(--text-muted);">No hay registros de asistencia guardados.</td>
             </tr>
-            <tr>
-                <td><strong>07/05/2026</strong></td>
-                <td>2557909 - ADSO Nocturna</td>
-                <td style="color: var(--primary); font-weight: 600;">29</td>
-                <td style="color: var(--danger);">1</td>
-                <td style="color: var(--warning);">2</td>
-                <td><span class="badge badge-presente" style="padding: 4px 8px; font-size: 0.75rem;">Guardado</span></td>
-                <td style="text-align: right;"><a href="#" style="color: var(--info); text-decoration: none;"><i class="ph ph-download-simple" style="font-size: 1.2rem;"></i></a></td>
-            </tr>
+            {% endfor %}
         </tbody>
     </table>
 </div>
+<script>
+    const botonFiltroFecha = document.getElementById('btnFiltroFecha');
+    const formularioFiltroFecha = document.getElementById('formFiltroFecha');
+
+    botonFiltroFecha.addEventListener('click', () => {
+        formularioFiltroFecha.hidden = !formularioFiltroFecha.hidden;
+        if (!formularioFiltroFecha.hidden) {
+            document.getElementById('fechaFiltro').focus();
+        }
+    });
+</script>
 {% endblock %}

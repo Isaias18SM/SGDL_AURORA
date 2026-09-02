@@ -1,7 +1,7 @@
 import csv
 import io
 import uuid
-from flask import Blueprint, render_template, request, redirect, url_for, flash, session, jsonify
+from flask import Blueprint, make_response, render_template, request, redirect, url_for, flash, session, jsonify
 from app.utils.decorators import solo_rol
 from app.database import get_db, obtener_novedades_pendientes, marcar_novedad_resuelta
 
@@ -12,7 +12,7 @@ def _obtener_fichas():
     conn = get_db()
     try:
         with conn.cursor() as cur:
-            cur.execute("SELECT ID_FICHA, No_FICHA FROM ficha ORDER BY No_FICHA")
+            cur.execute("SELECT Id_FICHA, No_FICHA FROM ficha ORDER BY No_FICHA")
             return cur.fetchall()
     finally:
         conn.close()
@@ -28,6 +28,7 @@ def _obtener_aprendices():
                 LEFT JOIN usuario_ficha_asignacion ufa ON ufa.Id_Usuario = u.Id_Usuario
                 LEFT JOIN ficha f ON f.ID_FICHA = ufa.ID_FICHA
                 WHERE u.ROL = 'Aprendiz'
+                ORDER BY u.Id_Usuario DESC
             """)
             filas = cur.fetchall()
             return [
@@ -47,14 +48,21 @@ def _obtener_fichas():
     try:
         with conn.cursor() as cur:
             cur.execute("""
-                SELECT f.No_FICHA, f.Jornada, f.TipoDeFicha, 
+                SELECT f.No_FICHA, f.Jornada, f.TipoDeFicha,
                        f.FechaInicio, f.FechaFinal, p.Nombre
                 FROM ficha f
                 LEFT JOIN programa p ON p.Id_Programa = f.Id_Programa
+                WHERE EXISTS (
+                    SELECT 1
+                    FROM usuario_ficha_asignacion ufa
+                    WHERE ufa.ID_FICHA = f.ID_FICHA
+                )
+                ORDER BY f.No_FICHA
             """)
             filas = cur.fetchall()
             return [
                 {
+                    "No_FICHA": r['No_FICHA'],
                     "numero_ficha": r['No_FICHA'],
                     "jornada": r['Jornada'],
                     "tipo_ficha": r['TipoDeFicha'],
@@ -132,17 +140,12 @@ def reportes_coordinador():
                 """, (ins['id'],))
                 ins['fichas'] = cur.fetchall()
 
-            # 3. Fichas sin instructor asignado
+            # 3. Todas las fichas pueden asignarse a más de un instructor.
             cur.execute("""
                 SELECT f.No_FICHA as codigo, p.Nombre as programa
                 FROM ficha f
                 LEFT JOIN programa p ON p.Id_Programa = f.Id_Programa
-                WHERE f.ID_FICHA NOT IN (
-                    SELECT DISTINCT ufa.ID_FICHA 
-                    FROM usuario_ficha_asignacion ufa
-                    JOIN usuario u ON u.Id_Usuario = ufa.Id_Usuario
-                    WHERE u.ROL = 'Instructor'
-                )
+                ORDER BY f.No_FICHA
             """)
             fichas_libres = cur.fetchall()
     finally:
@@ -156,13 +159,19 @@ def reportes_coordinador():
     )
 
 
+@coordinador.route('/coordinador/instructores')
+@solo_rol('coordinador')
+def gestion_instructores():
+    return redirect(url_for('coordinador.reportes_coordinador'))
+
+
 @coordinador.route('/coordinador/asignar-ficha', methods=['POST'])
 @solo_rol('coordinador')
 def coordinador_asignar_ficha():
     instructor_id = request.form.get('instructor_id')
     fichas_codigos = request.form.getlist('ficha_codigo')
 
-    if not fichas_codigos:
+    if not instructor_id or not fichas_codigos:
         flash('Selecciona al menos una ficha para asignar.', 'error')
         return redirect(url_for('coordinador.reportes_coordinador'))
 
@@ -176,14 +185,8 @@ def coordinador_asignar_ficha():
                 return redirect(url_for('coordinador.reportes_coordinador'))
             id_trimestre = trimestre['Id_Trimestre']
 
-            cur.execute(
-                """INSERT INTO asignacion (Id_Usuario, Id_Trimestre, HORA_INICIO, HORA_FINALIZACION)
-                   VALUES (%s, %s, '07:00:00', '13:00:00')""",
-                (instructor_id, id_trimestre)
-            )
-            id_asignacion = cur.lastrowid
-
             asignadas, no_encontradas = 0, []
+            fichas_nuevas = []
 
             for ficha_codigo in fichas_codigos:
                 cur.execute("SELECT ID_FICHA FROM ficha WHERE No_FICHA = %s LIMIT 1", (ficha_codigo,))
@@ -201,10 +204,25 @@ def coordinador_asignar_ficha():
                 if cur.fetchone():
                     continue
 
+                fichas_nuevas.append(ficha['ID_FICHA'])
+
+            if not fichas_nuevas:
+                conn.rollback()
+                flash('El instructor ya tiene asignadas todas las fichas seleccionadas.', 'error')
+                return redirect(url_for('coordinador.reportes_coordinador'))
+
+            cur.execute(
+                """INSERT INTO asignacion (Id_Usuario, Id_Trimestre, HORA_INICIO, HORA_FINALIZACION)
+                   VALUES (%s, %s, '07:00:00', '13:00:00')""",
+                (instructor_id, id_trimestre)
+            )
+            id_asignacion = cur.lastrowid
+
+            for id_ficha in fichas_nuevas:
                 cur.execute(
                     """INSERT INTO usuario_ficha_asignacion (Id_Usuario, ID_FICHA, ID_ASIGNACION)
                        VALUES (%s, %s, %s)""",
-                    (instructor_id, ficha['ID_FICHA'], id_asignacion)
+                    (instructor_id, id_ficha, id_asignacion)
                 )
                 asignadas += 1
 
@@ -228,6 +246,7 @@ def coordinador_asignar_ficha():
 @solo_rol('coordinador')
 def coordinador_desasignar_ficha():
     ficha_codigo = request.form.get('ficha_codigo')
+    instructor_id = request.form.get('instructor_id')
 
     conn = get_db()
     try:
@@ -235,9 +254,13 @@ def coordinador_desasignar_ficha():
             cur.execute("SELECT ID_FICHA FROM ficha WHERE No_FICHA = %s LIMIT 1", (ficha_codigo,))
             ficha = cur.fetchone()
             if ficha:
-                cur.execute("DELETE FROM usuario_ficha_asignacion WHERE ID_FICHA = %s", (ficha['ID_FICHA'],))
+                cur.execute(
+                    """DELETE FROM usuario_ficha_asignacion
+                       WHERE ID_FICHA = %s AND Id_Usuario = %s""",
+                    (ficha['ID_FICHA'], instructor_id)
+                )
                 conn.commit()
-                flash('Asignación removida.', 'success')
+                flash('Asignación removida para el instructor.', 'success')
     except Exception as e:
         conn.rollback()
         flash('Error al desasignar la ficha.', 'error')
@@ -278,12 +301,16 @@ def historia_coordinador():
 @coordinador.route('/formulario-coordinador')
 @solo_rol('coordinador')
 def formulario_coordinador():
-    return render_template(
+    respuesta = render_template(
         'aprendices.html',
         active_page='formulario',
         fichas=_obtener_fichas(),
         aprendices=_obtener_aprendices()
     )
+    response = make_response(respuesta)
+    response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+    response.headers['Pragma'] = 'no-cache'
+    return response
 
 
 
@@ -334,12 +361,15 @@ def registrar_usuario():
                 id_asignacion = resultado['ID_ASIGNACION']
 
             clave_encriptada = str(num_doc)
+            token_qr = uuid.uuid4().hex
 
             cur.execute(
                 """INSERT INTO usuario
-                   (Nombre, Apellidos, No_Documento, TPI_DOCUMENTO, CORREO_SENA, CONTRASENA, ROL, Activo_SN)
-                   VALUES (%s, %s, %s, %s, %s, %s, %s, %s)""",
-                (nombres, apellidos, num_doc, tipo_doc, correo, clave_encriptada, rol, '1')
+                   (Nombre, Apellidos, No_Documento, TPI_DOCUMENTO, CORREO_SENA,
+                    CONTRASENA, ROL, Activo_SN, Token_QR)
+                   VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)""",
+                (nombres, apellidos, num_doc, tipo_doc, correo,
+                 clave_encriptada, rol, '1', token_qr)
             )
             nuevo_id = cur.lastrowid
 

@@ -1,0 +1,126 @@
+{% extends 'base.html' %}
+{% set active_page = 'instructores' %}
+
+{% block content %}
+<div class="page-heading">
+    <div>
+        <span class="section-kicker">Administracion academica</span>
+        <h2>GESTIONAR INSTRUCTORES</h2>
+        <p>Registra instructores y administra las fichas que pueden gestionar.</p>
+    </div>
+    <div class="coord-stat-pill">
+        <i class="ph ph-chalkboard-teacher"></i>
+        <span>{{ instructores|length }} instructor(es)</span>
+    </div>
+</div>
+
+<div class="management-layout">
+    <section class="card management-create">
+        <div class="section-title">
+            <div class="section-icon"><i class="ph ph-user-plus"></i></div>
+            <div>
+                <h3>Nuevo instructor</h3>
+                <p>Los datos de acceso se generan con el documento.</p>
+            </div>
+        </div>
+        <form method="POST" action="{{ url_for('coordinador.registrar_usuario') }}" class="form-grid">
+            <input type="hidden" name="rol" value="Instructor">
+            <div class="form-group">
+                <label class="form-label" for="nombres">Nombres</label>
+                <input class="form-input" id="nombres" name="nombres" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="apellidos">Apellidos</label>
+                <input class="form-input" id="apellidos" name="apellidos" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="tipo_documento">Tipo de documento</label>
+                <select class="form-input" id="tipo_documento" name="tipo_documento" required>
+                    <option value="CC">Cedula de Ciudadania (CC)</option>
+                    <option value="TI">Tarjeta de Identidad (TI)</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="numero_documento">Numero de documento</label>
+                <input class="form-input" id="numero_documento" name="numero_documento" inputmode="numeric" pattern="[0-9]+" required>
+            </div>
+            <div class="form-group form-group-full">
+                <label class="form-label" for="correo">Correo institucional</label>
+                <input class="form-input" type="email" id="correo" name="correo" placeholder="nombre.apellido@sena.edu.co" required>
+            </div>
+            <div class="form-group form-group-full">
+                <button type="submit" class="btn-primary"><i class="ph ph-user-plus"></i> Crear instructor</button>
+            </div>
+        </form>
+    </section>
+
+    <section class="card management-assign">
+        <div class="section-title">
+            <div class="section-icon"><i class="ph ph-folder-notch-open"></i></div>
+            <div>
+                <h3>Asignar fichas</h3>
+                <p>Una ficha puede pertenecer a varios instructores.</p>
+            </div>
+        </div>
+        <form method="POST" action="{{ url_for('coordinador.coordinador_asignar_ficha') }}" class="assign-form">
+            <div class="form-group">
+                <label class="form-label" for="instructor_id">Instructor</label>
+                <select class="form-input" id="instructor_id" name="instructor_id" required>
+                    <option value="">Selecciona un instructor</option>
+                    {% for instructor in instructores %}
+                    <option value="{{ instructor.id }}">{{ instructor.nombres }} {{ instructor.apellidos }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Fichas disponibles</label>
+                <div class="ficha-checklist">
+                    {% for ficha in fichas %}
+                    <label class="ficha-check">
+                        <input type="checkbox" name="ficha_codigo" value="{{ ficha.codigo }}">
+                        <span><strong>Ficha {{ ficha.codigo }}</strong><small>{{ ficha.programa or 'Sin programa' }}{% if ficha.jornada %} · {{ ficha.jornada }}{% endif %}</small></span>
+                    </label>
+                    {% else %}
+                    <p class="empty-state">No hay fichas registradas.</p>
+                    {% endfor %}
+                </div>
+            </div>
+            <button type="submit" class="btn-primary" {% if not fichas or not instructores %}disabled{% endif %}>
+                <i class="ph ph-link"></i> Asignar fichas seleccionadas
+            </button>
+        </form>
+    </section>
+</div>
+
+<section class="card instructor-directory">
+    <div class="section-title">
+        <div class="section-icon"><i class="ph ph-users-three"></i></div>
+        <div>
+            <h3>Instructores registrados</h3>
+            <p>Consulta rapidamente las fichas asignadas a cada instructor.</p>
+        </div>
+    </div>
+    <div class="instructor-list">
+        {% for instructor in instructores %}
+        <article class="instructor-row">
+            <div class="instructor-identity">
+                <div class="user-avatar"></div>
+                <div>
+                    <strong>{{ instructor.nombres }} {{ instructor.apellidos }}</strong>
+                    <small>{{ instructor.correo }}</small>
+                </div>
+            </div>
+            <div class="assigned-fichas">
+                {% for ficha in instructor.fichas %}
+                <span class="ficha-tag">Ficha {{ ficha.codigo }}</span>
+                {% else %}
+                <span class="empty-state">Sin fichas asignadas</span>
+                {% endfor %}
+            </div>
+        </article>
+        {% else %}
+        <p class="empty-state">Aun no hay instructores registrados.</p>
+        {% endfor %}
+    </div>
+</section>
+{% endblock %}

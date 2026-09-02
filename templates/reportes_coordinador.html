@@ -2,26 +2,26 @@
 {% set active_page = 'reportes' %}
 
 {% block content %}
-<div style="margin-bottom: 30px; display:flex; justify-content:space-between; align-items:flex-end; flex-wrap:wrap; gap:15px;">
+<div class="assignment-heading">
     <div>
-        <h2>INSTRUCTORES</h2>
-        <p style="color: var(--text-muted);">Gestiona los instructores del programa y asígnalos a las fichas activas.</p>
+        <h2>ASIGNAR FICHAS A INSTRUCTORES</h2>
+        <p style="color: var(--text-muted);">Selecciona un instructor y asígnale una o varias fichas activas.</p>
     </div>
     <div class="coord-stat-pill">
         <i class="ph ph-folder-open"></i>
-        <span>{{ fichas_libres|length }} ficha(s) sin instructor asignado</span>
+        <span>{{ fichas_libres|length }} ficha(s) disponibles para asignar</span>
     </div>
 </div>
 
-<div class="dashboard-grid">
+<div class="instructor-assignment-grid">
     {% for ins in instructores %}
-    <div class="card" style="display:flex; flex-direction:column; gap:15px;">
-        <div style="display:flex; justify-content:space-between; align-items:flex-start;">
-            <div style="display:flex; gap:12px; align-items:center;">
-                <div class="user-avatar" style="width:44px; height:44px; flex-shrink:0;"></div>
+    <div class="card instructor-assignment-card">
+        <div class="instructor-card-header">
+            <div class="instructor-card-identity">
+                <div class="user-avatar instructor-avatar"></div>
                 <div>
-                    <h3 style="color: var(--primary); font-size:1rem;">{{ ins.nombre }}</h3>
-                    <p style="color: var(--text-muted); font-size:0.8rem;">{{ ins.especialidad or 'Instructor' }}</p>
+                    <h3>{{ ins.nombre }}</h3>
+                    <p>{{ ins.especialidad or 'Instructor' }}</p>
                 </div>
             </div>
             <span class="badge badge-presente">{{ ins.fichas|length }} ficha(s)</span>
@@ -29,16 +29,17 @@
 
         <div>
             {% if ins.fichas %}
-            <p style="font-size:0.78rem; color:var(--text-muted); margin-bottom:8px; font-weight:600;">FICHAS ASIGNADAS</p>
-            <div style="display:flex; flex-direction:column; gap:8px;">
+            <p class="assignment-label">FICHAS ASIGNADAS</p>
+            <div class="assigned-ficha-list">
                 {% for f in ins.fichas %}
                 <div class="ficha-mini-row">
                     <div>
                         <strong>Ficha {{ f.codigo }}</strong>
-                        <p>{{ f.programa }} &middot; {{ f.jornada }}</p>
+                        <p>{{ f.programa }}{% if f.jornada %} &middot; {{ f.jornada }}{% endif %}</p>
                     </div>
                     <form method="POST" action="{{ url_for('coordinador.coordinador_desasignar_ficha') }}">
                         <input type="hidden" name="ficha_codigo" value="{{ f.codigo }}">
+                        <input type="hidden" name="instructor_id" value="{{ ins.id }}">
                         <button type="submit" class="btn-icon-danger" title="Quitar asignación">
                             <i class="ph ph-x"></i>
                         </button>
@@ -47,30 +48,30 @@
                 {% endfor %}
             </div>
             {% else %}
-            <p style="font-size:0.85rem; color:var(--text-muted);">Sin fichas asignadas todavía.</p>
+            <p class="empty-state">Sin fichas asignadas todavía.</p>
             {% endif %}
         </div>
 
         <details class="assign-panel">
-    <summary class="btn-outline-fichas" style="width:100%; justify-content:center;">
+    <summary class="assignment-toggle">
         <i class="ph ph-plus-circle"></i> Asignar a ficha
     </summary>
-    <div style="margin-top:12px;">
+    <div class="assignment-options">
         {% if fichas_libres %}
         <form method="POST" action="{{ url_for('coordinador.coordinador_asignar_ficha') }}">
             <input type="hidden" name="instructor_id" value="{{ ins.id }}">
-            <div style="display:flex; flex-direction:column; gap:6px; margin-bottom:10px; max-height:160px; overflow-y:auto;">
+            <div class="assignment-checklist">
                 {% for f in fichas_libres %}
-                <label style="display:flex; align-items:center; gap:8px; font-size:0.85rem; font-weight:normal;">
+                <label class="assignment-check">
                     <input type="checkbox" name="ficha_codigo" value="{{ f.codigo }}">
                     Ficha {{ f.codigo }} — {{ f.programa }}
                 </label>
                 {% endfor %}
             </div>
-            <button type="submit" class="btn-primary-sm" style="width:100%;">Asignar seleccionadas</button>
+            <button type="submit" class="btn-primary-sm">Asignar seleccionadas</button>
         </form>
         {% else %}
-        <p style="font-size:0.85rem; color:var(--text-muted);">No hay fichas disponibles para asignar en este momento.</p>
+        <p class="empty-state">No hay fichas disponibles para asignar en este momento.</p>
         {% endif %}
     </div>
 </details>
