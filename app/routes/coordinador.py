@@ -2,8 +2,8 @@ import csv
 import io
 import uuid
 from flask import Blueprint, render_template, request, redirect, url_for, flash
-from decorators import solo_rol
-from database import get_db
+from app.utils.decorators import solo_rol
+from app.database import get_db
 
 coordinador = Blueprint('coordinador', __name__)
 
@@ -40,14 +40,14 @@ def _obtener_aprendices():
             ]
     finally:
         conn.close()
-        
+
+
 def _obtener_programas():
     conn = get_db()
     try:
         with conn.cursor() as cur:
             cur.execute("SELECT Id_Programa AS id, Nombre AS nombre FROM programa")
-            datos = cur.fetchall()
-            return datos
+            return cur.fetchall()
     finally:
         conn.close()
 
@@ -106,11 +106,12 @@ def reportes_coordinador():
         fichas_libres=fichas_libres
     )
 
+
 @coordinador.route('/coordinador/asignar-ficha', methods=['POST'])
 @solo_rol('coordinador')
 def coordinador_asignar_ficha():
     instructor_id = request.form.get('instructor_id')
-    fichas_codigos = request.form.getlist('ficha_codigo')  # <-- ahora es una lista
+    fichas_codigos = request.form.getlist('ficha_codigo')
 
     if not fichas_codigos:
         flash('Selecciona al menos una ficha para asignar.', 'error')
@@ -119,7 +120,6 @@ def coordinador_asignar_ficha():
     conn = get_db()
     try:
         with conn.cursor() as cur:
-            # 1. Trimestre válido/activo
             cur.execute("SELECT Id_Trimestre FROM trimestre ORDER BY Id_Trimestre DESC LIMIT 1")
             trimestre = cur.fetchone()
             if not trimestre:
@@ -127,8 +127,6 @@ def coordinador_asignar_ficha():
                 return redirect(url_for('coordinador.reportes_coordinador'))
             id_trimestre = trimestre['Id_Trimestre']
 
-            # 2. Una sola fila de 'asignacion' para el instructor en este trimestre,
-            #    reutilizable para todas las fichas que se le asignen ahora.
             cur.execute(
                 """INSERT INTO asignacion (Id_Usuario, Id_Trimestre, HORA_INICIO, HORA_FINALIZACION)
                    VALUES (%s, %s, '07:00:00', '13:00:00')""",
@@ -146,7 +144,6 @@ def coordinador_asignar_ficha():
                     no_encontradas.append(ficha_codigo)
                     continue
 
-                # Evita duplicar si por alguna razón ya estaba asignada a este instructor
                 cur.execute(
                     """SELECT 1 FROM usuario_ficha_asignacion
                        WHERE Id_Usuario = %s AND ID_FICHA = %s LIMIT 1""",
@@ -222,24 +219,23 @@ def formulario_coordinador():
         fichas=_obtener_fichas(),
         aprendices=_obtener_aprendices()
     )
-    
+
+
 @coordinador.route('/formulario-ficha')
 @solo_rol('coordinador')
 def formulario_ficha():
-    datos_programas = _obtener_programas
     return render_template(
         'Formulario_New_Ficha.html',
         active_page='formulario_ficha',
-        programas=datos_programas()
+        programas=_obtener_programas()
     )
-    
 
 
 @coordinador.route('/coordinador/registrar-usuario', methods=['POST'])
 @solo_rol('coordinador')
 def registrar_usuario():
-    nombres = request.form.get('nombres', '').strip()
-    apellidos = request.form.get('apellidos', '').strip()
+    nombres = request.form.get('nombres', '').strip().title()
+    apellidos = request.form.get('apellidos', '').strip().title()
     rol = request.form.get('rol', '').strip()
     tipo_doc = request.form.get('tipo_documento', '').strip()
     num_doc = request.form.get('numero_documento', '').strip()
@@ -327,7 +323,6 @@ def ficha_manual():
     conn = get_db()
     try:
         with conn.cursor() as cur:
-
             cur.execute(
                 """INSERT INTO ficha
                    (No_FICHA, Jornada, TipoDeFicha, Vigencia, FechaInicio, FechaFinal, Id_Programa)
@@ -335,19 +330,13 @@ def ficha_manual():
                 (NumeroFicha, Jornada, TipoFicha, Vigencia, FechaInicio, FechaFinal, Programa)
             )
 
-
-
         conn.commit()
         flash(f'Ficha {NumeroFicha} registrada correctamente.', 'success')
-        
+
     except Exception as e:
         conn.rollback()
-        print(f"\n[ERROR DE BASE DE DATOS]: {e}\n")
-        print("\n" + "="*50)
-        print(f"ERROR EXACTO DE LA BD: {e}")
-        print("="*50 + "\n")
         print(f"[DB ERROR] {e}")
-        flash('Error al registrar el aprendiz. Verifica que el documento no esté duplicado.', 'error')
+        flash('Error al registrar la ficha.', 'error')
     finally:
         conn.close()
 
@@ -397,11 +386,7 @@ def aprendices_masivo():
                     id_asignacion = resultado['ID_ASIGNACION']
 
                     numero_documento = fila.get('numero_documento', '').strip()
-
-                    # --- LA CORRECCIÓN ESTÁ AQUÍ ---
-                    # La contraseña es el mismo número de documento, sin hashear.
                     contrasena_inicial = numero_documento
-                    # Token único para que el QR del aprendiz funcione desde el primer día.
                     token_qr = uuid.uuid4().hex
 
                     cur.execute(

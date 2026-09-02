@@ -1,3 +1,21 @@
 venv/
 __pycache__/
 *.pyc
+# Entorno virtual
+venv/
+env/
+
+# Caché de Python y archivos compilados
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Configuración local e IDE
+.vscode/
+.idea/
+.env
+
+# Archivos de la base de datos o subidas locales (opcional)
+*.db
+*.sqlite3
+uploads/

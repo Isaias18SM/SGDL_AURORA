@@ -111,4 +111,187 @@
         </tbody>
     </table>
 </div>
+
+
+<section class="estadisticas-asistencia">
+
+    <div class="estadisticas-header">
+
+        <div>
+            <h2>Mi asistencia</h2>
+            <p>
+                Consulta tu porcentaje de asistencia
+                por periodo.
+            </p>
+        </div>
+
+        <div class="filtros-asistencia">
+
+            <select id="filtroPeriodo">
+                <option value="mes">Mes</option>
+                <option value="trimestre">Trimestre</option>
+                <option value="anio">Año</option>
+            </select>
+
+            <select id="filtroAnio">
+                <option value="2026">2026</option>
+            </select>
+
+            <select id="filtroMes">
+                <option value="1">Enero</option>
+                <option value="2">Febrero</option>
+                <option value="3">Marzo</option>
+                <option value="4">Abril</option>
+                <option value="5">Mayo</option>
+                <option value="6">Junio</option>
+                <option value="7">Julio</option>
+                <option value="8" selected>Agosto</option>
+                <option value="9">Septiembre</option>
+                <option value="10">Octubre</option>
+                <option value="11">Noviembre</option>
+                <option value="12">Diciembre</option>
+            </select>
+
+            <select
+                id="filtroTrimestre"
+                style="display: none;"
+            >
+                <option value="1">T1</option>
+                <option value="2">T2</option>
+                <option value="3">T3</option>
+                <option value="4">T4</option>
+            </select>
+
+        </div>
+
+    </div>
+
+
+    <!-- RESUMEN -->
+
+    <div class="resumen-asistencia">
+
+        <div class="resumen-card card-porcentaje">
+
+            <div
+                class="circulo-asistencia"
+                id="circuloAsistencia"
+            >
+                <div class="circulo-asistencia-content">
+
+                    <span id="porcentajeAsistencia">
+                        0%
+                    </span>
+
+                    <small>
+                        Asistencia
+                    </small>
+
+                </div>
+            </div>
+
+            <div class="resumen-info">
+
+                <span>
+                    Porcentaje actual
+                </span>
+
+                <strong>
+                    <span id="estadoAsistencia">
+                        Sin datos
+                    </span>
+                </strong>
+
+            </div>
+
+        </div>
+
+
+        <div class="resumen-card card-presentes">
+
+            <div class="resumen-info">
+
+                <span>
+                    Presentes
+                </span>
+
+                <strong id="totalPresentes">
+                    0
+                </strong>
+
+            </div>
+
+        </div>
+
+
+        <div class="resumen-card card-fallas">
+
+            <div class="resumen-info">
+
+                <span>
+                    Fallas
+                </span>
+
+                <strong id="totalFallas">
+                    0
+                </strong>
+
+            </div>
+
+        </div>
+
+
+        <div class="resumen-card card-total">
+
+            <div class="resumen-info">
+
+                <span>
+                    Registros
+                </span>
+
+                <strong id="totalRegistros">
+                    0
+                </strong>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- GRÁFICA -->
+
+    <div class="progresion-asistencia">
+
+        <div class="progresion-asistencia-header">
+
+            <h3>
+                Evolución de asistencia
+            </h3>
+
+            <span id="periodoGrafica">
+                Agosto 2026
+            </span>
+
+        </div>
+
+        <div class="grafica-container">
+
+            <canvas id="graficaAsistencia"></canvas>
+
+        </div>
+
+    </div>
+
+</section>
+
+</section>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script src="{{ url_for('static', filename='js/asistencia_aprendiz_graf.js') }}"></script>
 {% endblock %}
+
+
+
