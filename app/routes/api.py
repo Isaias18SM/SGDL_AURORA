@@ -107,6 +107,7 @@ def api_cambiar_estado():
     data = request.get_json(silent=True) or {}
     id_usuario = data.get('id')
     estado = (data.get('estado') or '').strip()
+    ficha = (data.get('ficha') or '').strip()
 
     estados_validos = ('Presente', 'Falla', 'Retardo', 'Excusa')
     if not id_usuario or estado not in estados_validos:
@@ -118,18 +119,45 @@ def api_cambiar_estado():
     try:
         conn = get_db()
         with conn.cursor() as cur:
-            # IMPORTANTE: esto requiere que la tabla `asistencia` tenga una
-            # llave UNIQUE sobre (Id_Usuario, Fecha_Requerida). Si no la
-            # tiene, cada clic insertará una fila nueva en vez de actualizar
-            # la existente. Ver nota más abajo para el ALTER TABLE necesario.
+            cur.execute(
+                """SELECT ufa.ID_FICHA
+                   FROM usuario_ficha_asignacion ufa
+                   JOIN ficha f ON f.ID_FICHA = ufa.ID_FICHA
+                   WHERE ufa.Id_Usuario = %s AND f.No_FICHA = %s
+                   LIMIT 1""",
+                (id_usuario, ficha)
+            )
+            ficha_row = cur.fetchone()
+            if not ficha_row:
+                return jsonify({"status": "error", "message": "El aprendiz no pertenece a la ficha seleccionada."}), 400
+
+            id_ficha = ficha_row['ID_FICHA']
             cur.execute(
                 """
-                INSERT INTO asistencia (Id_Usuario, Fecha_Requerida, Estado)
-                VALUES (%s, %s, %s)
-                ON DUPLICATE KEY UPDATE Estado = VALUES(Estado)
+                INSERT INTO asistencia
+                    (Id_Usuario, ID_FICHA, Fecha_Requerida, HoraRegistro, Estado)
+                VALUES
+                    (%s, %s, %s,
+                     CASE WHEN %s IN ('Presente', 'Retardo') THEN NOW() ELSE NULL END,
+                     %s)
+                ON DUPLICATE KEY UPDATE
+                    ID_FICHA = VALUES(ID_FICHA),
+                    Estado = VALUES(Estado),
+                    HoraRegistro = CASE
+                        WHEN VALUES(Estado) IN ('Presente', 'Retardo')
+                            THEN COALESCE(HoraRegistro, NOW())
+                        ELSE HoraRegistro
+                    END
                 """,
-                (id_usuario, hoy, estado)
+                (id_usuario, id_ficha, hoy, estado, estado)
             )
+            cur.execute(
+                """SELECT Fecha_Requerida, HoraRegistro
+                   FROM asistencia
+                   WHERE Id_Usuario = %s AND Fecha_Requerida = %s""",
+                (id_usuario, hoy)
+            )
+            registro = cur.fetchone()
         conn.commit()
     except Exception as e:
         print(f"[DB ERROR] {e}")
@@ -140,7 +168,12 @@ def api_cambiar_estado():
         if conn:
             conn.close()
 
-    return jsonify({"status": "success", "message": "Estado actualizado correctamente"})
+    return jsonify({
+        "status": "success",
+        "message": "Estado actualizado correctamente",
+        "fecha": str(registro['Fecha_Requerida']) if registro else None,
+        "hora": registro['HoraRegistro'].strftime('%Y-%m-%d %H:%M:%S') if registro and registro['HoraRegistro'] else None
+    })
 
 
 @api_bp.route('/api/registrar-entrada', methods=['POST'])

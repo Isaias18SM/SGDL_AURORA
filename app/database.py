@@ -159,12 +159,14 @@ def obtener_aprendices_por_ficha(no_ficha, fecha=None):
                     u.No_Documento AS documento,
                     u.ROL AS perfil,
                     f.No_FICHA AS ficha,
-                    COALESCE(a.Estado, 'Sin registrar') AS estado
+                    COALESCE(a.Estado, 'Sin registrar') AS estado,
+                    a.Fecha_Requerida AS fecha_registro,
+                    a.HoraRegistro AS hora_entrada
                 FROM usuario u
                 JOIN usuario_ficha_asignacion ufa ON ufa.Id_Usuario = u.Id_Usuario
                 JOIN ficha f ON f.ID_FICHA = ufa.ID_FICHA
                 LEFT JOIN asistencia a 
-                    ON a.Id_Usuario = u.Id_Usuario 
+                    ON a.Id_Usuario = u.Id_Usuario
                     AND a.Fecha_Requerida = %s
                 WHERE f.No_FICHA = %s AND u.ROL = 'Aprendiz'
                 GROUP BY u.Id_Usuario
@@ -505,20 +507,34 @@ def obtener_solicitudes_aprendiz(id_aprendiz):
             conn.close()
 
 
-def obtener_solicitudes_pendientes():
-    """Devuelve las solicitudes pendientes de aprobación."""
+def obtener_solicitudes_pendientes(id_instructor=None):
+    """Devuelve solicitudes pendientes, opcionalmente filtradas por instructor."""
     conn = None
     try:
         conn = get_db()
         with conn.cursor() as cur:
-            cur.execute("""
+            consulta = """
                 SELECT p.Id_Permiso, p.Fecha, p.Hora_Solicitada, p.Motivo, p.Fecha_Solicitud,
                        CONCAT(u.Nombre, ' ', u.Apellidos) AS aprendiz
                 FROM permiso_salida p
                 JOIN usuario u ON u.Id_Usuario = p.Id_Aprendiz
                 WHERE p.Estado = 'Pendiente'
-                ORDER BY p.Fecha_Solicitud ASC
-            """)
+            """
+            parametros = []
+            if id_instructor is not None:
+                consulta += """
+                    AND EXISTS (
+                        SELECT 1
+                        FROM usuario_ficha_asignacion ufa_aprendiz
+                        JOIN usuario_ficha_asignacion ufa_instructor
+                          ON ufa_instructor.ID_FICHA = ufa_aprendiz.ID_FICHA
+                        WHERE ufa_aprendiz.Id_Usuario = p.Id_Aprendiz
+                          AND ufa_instructor.Id_Usuario = %s
+                    )
+                """
+                parametros.append(id_instructor)
+            consulta += " ORDER BY p.Fecha_Solicitud ASC"
+            cur.execute(consulta, tuple(parametros))
             return cur.fetchall()
     except Exception as e:
         print(f"[DB ERROR] {e}")
@@ -537,6 +553,26 @@ def responder_solicitud_salida(id_permiso, id_instructor, nuevo_estado):
     try:
         conn = get_db()
         with conn.cursor() as cur:
+            cur.execute(
+                """SELECT p.Id_Aprendiz
+                   FROM permiso_salida p
+                   WHERE p.Id_Permiso = %s
+                     AND p.Estado = 'Pendiente'
+                     AND (
+                         %s IS NULL OR EXISTS (
+                             SELECT 1
+                             FROM usuario_ficha_asignacion ufa_aprendiz
+                             JOIN usuario_ficha_asignacion ufa_instructor
+                               ON ufa_instructor.ID_FICHA = ufa_aprendiz.ID_FICHA
+                             WHERE ufa_aprendiz.Id_Usuario = p.Id_Aprendiz
+                               AND ufa_instructor.Id_Usuario = %s
+                         )
+                     )""",
+                (id_permiso, id_instructor, id_instructor)
+            )
+            if not cur.fetchone():
+                return {"ok": False, "message": "La solicitud no pertenece a tus fichas o ya fue procesada."}
+
             cur.execute("""
                 UPDATE permiso_salida
                 SET Estado = %s, Id_Instructor = %s, Fecha_Respuesta = %s
