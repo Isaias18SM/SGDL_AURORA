@@ -10,12 +10,14 @@ from app.database import (
     responder_solicitud_salida,
     crear_circular,
     obtener_circulares_recientes,
-    obtener_soportes_para_revision
+    obtener_soportes_para_revision,
+    crear_novedad
 )
 
 instructor_bp = Blueprint('instructor', __name__)
 
 ESTADOS_VALIDOS = ['Presente', 'Falla', 'Retardo', 'Excusa']
+TIPOS_NOVEDAD_VALIDOS = ['Alerta', 'Excusa', 'Inasistencia', 'Otro']
 
 
 @instructor_bp.route('/dashboard')
@@ -74,21 +76,58 @@ def modulos():
 @solo_rol('instructor', 'coordinador')
 def novedades():
     mensaje = None
-    if request.method == 'POST':
-        titulo = request.form.get('titulo', '').strip()
-        cuerpo = request.form.get('mensaje', '').strip()
 
-        if not titulo or not cuerpo:
-            mensaje = ('error', 'Debes indicar el título y el mensaje de la circular.')
-        else:
-            resultado = crear_circular(session['id'], titulo, cuerpo)
-            mensaje = ('exito', resultado['message']) if resultado['ok'] else ('error', resultado['message'])
+    if request.method == 'POST':
+        accion = request.form.get('accion')
+
+        # --- Publicar circular ---
+        if accion == 'circular':
+            titulo = request.form.get('titulo', '').strip()
+            cuerpo = request.form.get('mensaje', '').strip()
+
+            if not titulo or not cuerpo:
+                mensaje = ('error', 'Debes indicar el título y el mensaje de la circular.')
+            else:
+                resultado = crear_circular(session['id'], titulo, cuerpo)
+                mensaje = ('exito', resultado['message']) if resultado['ok'] else ('error', resultado['message'])
+
+        # --- Enviar novedad al coordinador (SOLO instructor) ---
+        elif accion == 'novedad':
+            if session.get('rol') != 'instructor':
+                mensaje = ('error', 'Solo los instructores pueden enviar novedades al coordinador.')
+            else:
+                titulo = request.form.get('novedad_titulo', '').strip()
+                cuerpo = request.form.get('novedad_mensaje', '').strip()
+                tipo = request.form.get('novedad_tipo', 'Alerta').strip()
+                ficha_raw = request.form.get('novedad_ficha', '').strip()
+                id_ficha = int(ficha_raw) if ficha_raw.isdigit() else None
+
+                if tipo not in TIPOS_NOVEDAD_VALIDOS:
+                    tipo = 'Alerta'
+
+                if not titulo or not cuerpo:
+                    mensaje = ('error', 'Debes indicar el título y el mensaje de la novedad.')
+                else:
+                    resultado = crear_novedad(
+                        id_instructor=session['id'],
+                        titulo=titulo,
+                        mensaje=cuerpo,
+                        id_ficha=id_ficha,
+                        tipo=tipo
+                    )
+                    mensaje = ('exito', resultado['message']) if resultado['ok'] else ('error', resultado['message'])
+
+    # Fichas del instructor, usadas en el selector del formulario de novedad
+    usuario_id = session.get('id') if session.get('rol') == 'instructor' else None
+    fichas = obtener_fichas(usuario_id) if session.get('rol') == 'instructor' else []
 
     return render_template(
         'novedades.html',
         active_page='novedades',
         circulares=obtener_circulares_recientes(20),
         soportes=obtener_soportes_para_revision(),
+        fichas=fichas,
+        tipos_novedad=TIPOS_NOVEDAD_VALIDOS,
         mensaje=mensaje
     )
 
@@ -128,7 +167,6 @@ def configuracion():
         else:
             resultado = actualizar_perfil_usuario(session.get('id'), nombre, email)
             if resultado['ok']:
-                # Refleja el cambio en la sesión activa
                 session['nombre'] = nombre
                 session['correo'] = email
                 mensaje = ('exito', resultado['message'])

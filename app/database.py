@@ -3,7 +3,6 @@ import pymysql.cursors
 from datetime import datetime, date, timedelta
 
 # Configuración global
-SIMULACION_ASISTENCIA = True
 UMBRAL_RIESGO_ASISTENCIA = 80  # % mínimo de asistencia antes de alertar riesgo académico
 
 
@@ -181,7 +180,7 @@ def obtener_aprendices_por_ficha(no_ficha, fecha=None):
 
 
 # ==========================================
-# ASISTENCIA Y SOPORTES
+# ASISTENCIA, REPORTES Y SOPORTES
 # ==========================================
 
 def obtener_historial_asistencia(id_usuario, fecha=None, estado=None):
@@ -214,378 +213,152 @@ def obtener_historial_asistencia(id_usuario, fecha=None, estado=None):
 
 def calcular_resumen_asistencia(id_usuario):
     """Calcula el porcentaje acumulado de asistencia y riesgo académico."""
-
     conn = None
     filas = []
-
     try:
         conn = get_db()
-
         with conn.cursor() as cur:
             cur.execute(
-                """
-                SELECT Estado, COUNT(*) AS total
-                FROM asistencia
-                WHERE Id_Usuario = %s
-                GROUP BY Estado
-                """,
+                "SELECT Estado, COUNT(*) AS total FROM asistencia WHERE Id_Usuario = %s GROUP BY Estado",
                 (id_usuario,)
             )
-
             filas = cur.fetchall()
-
     except Exception as e:
         print(f"[DB ERROR] {e}")
-
     finally:
         if conn:
             conn.close()
 
-    # =========================================================
-    # CONTAR ESTADOS
-    # =========================================================
+    conteo = {fila['Estado']: fila['total'] for fila in filas}
+    total_registros = sum(conteo.values())
+    presentes = conteo.get('Presente', 0)
 
-    conteo = {
-        fila['Estado']: fila['total']
-        for fila in filas
-    }
-
-    total_registros = sum(
-        conteo.values()
-    )
-
-    presentes = conteo.get(
-        'Presente',
-        0
-    )
-
-    fallas = conteo.get(
-        'Falla',
-        0
-    )
-
-    excusas = conteo.get(
-        'Excusa',
-        0
-    )
-
-    retardos = conteo.get(
-        'Retardo',
-        0
-    )
-
-    # =========================================================
-    # CALCULAR PORCENTAJE
-    # =========================================================
-
-    porcentaje = (
-        round(
-            (presentes / total_registros) * 100,
-            1
-        )
-        if total_registros > 0
-        else 0.0
-    )
-
-    # =========================================================
-    # CALCULAR RIESGO ACADÉMICO
-    # =========================================================
-
-    en_riesgo = (
-        total_registros > 0
-        and porcentaje < UMBRAL_RIESGO_ASISTENCIA
-    )
-
-    # =========================================================
-    # DEVOLVER RESUMEN
-    # =========================================================
+    porcentaje = round((presentes / total_registros) * 100, 1) if total_registros > 0 else 100.0
+    en_riesgo = total_registros > 0 and porcentaje < UMBRAL_RIESGO_ASISTENCIA
 
     return {
         "porcentaje": porcentaje,
         "total_registros": total_registros,
         "presentes": presentes,
-        "fallas": fallas,
-        "excusas": excusas,
-        "retardos": retardos,
+        "fallas": conteo.get('Falla', 0),
+        "excusas": conteo.get('Excusa', 0),
+        "retardos": conteo.get('Retardo', 0),
         "en_riesgo": en_riesgo,
         "umbral": UMBRAL_RIESGO_ASISTENCIA
     }
 
-    
+
 def obtener_asistencias_por_periodo(id_usuario, fecha_inicio, fecha_fin):
-    """
-    Obtiene las asistencias de un aprendiz dentro de un rango de fechas.
-
-    La consulta utiliza directamente Fecha_Requerida de la tabla asistencia.
-    """
+    """Obtiene las asistencias de un aprendiz dentro de un rango de fechas."""
     conn = None
-
     try:
         conn = get_db()
-
         with conn.cursor() as cur:
             cur.execute("""
-                SELECT
-                    Id_Asistencia,
-                    Id_Usuario,
-                    ID_FICHA,
-                    Fecha_Requerida,
-                    HoraRegistro,
-                    HoraSalida,
-                    Estado,
-                    Soporte_Justificacion
+                SELECT Id_Asistencia, Id_Usuario, ID_FICHA, Fecha_Requerida, HoraRegistro, HoraSalida, Estado, Soporte_Justificacion
                 FROM asistencia
-                WHERE Id_Usuario = %s
-                  AND Fecha_Requerida BETWEEN %s AND %s
+                WHERE Id_Usuario = %s AND Fecha_Requerida BETWEEN %s AND %s
                 ORDER BY Fecha_Requerida ASC
-            """, (
-                id_usuario,
-                fecha_inicio,
-                fecha_fin
-            ))
-
+            """, (id_usuario, fecha_inicio, fecha_fin))
             return cur.fetchall()
-
     except Exception as e:
-        print(f"[DB ERROR] {e}")    
+        print(f"[DB ERROR] {e}")
         return []
-
     finally:
         if conn:
             conn.close()
-            
-def obtener_estadisticas_instructor(
-    id_instructor,
-    fecha_inicio,
-    fecha_fin,
-    id_ficha=None
-):
-    """
-    Obtiene estadísticas de asistencia de los aprendices pertenecientes
-    a las fichas asignadas al instructor.
-    """
 
+
+def obtener_estadisticas_instructor(id_instructor, fecha_inicio, fecha_fin, id_ficha=None):
+    """Obtiene estadísticas de asistencia de aprendices asignados al instructor."""
     conn = None
-
     try:
         conn = get_db()
-
         with conn.cursor() as cur:
-
             sql = """
-                SELECT
+                SELECT 
                     u.Id_Usuario AS id_aprendiz,
                     CONCAT(u.Nombre, ' ', u.Apellidos) AS aprendiz,
                     f.ID_FICHA,
                     f.No_FICHA AS ficha,
-
                     COUNT(a.Id_Asistencia) AS total,
-
-                    SUM(
-                        CASE
-                            WHEN a.Estado = 'Presente'
-                            THEN 1
-                            ELSE 0
-                        END
-                    ) AS presentes,
-
-                    SUM(
-                        CASE
-                            WHEN a.Estado = 'Falla'
-                            THEN 1
-                            ELSE 0
-                        END
-                    ) AS fallas,
-
-                    SUM(
-                        CASE
-                            WHEN a.Estado = 'Retardo'
-                            THEN 1
-                            ELSE 0
-                        END
-                    ) AS retardos,
-
-                    SUM(
-                        CASE
-                            WHEN a.Estado = 'Excusa'
-                            THEN 1
-                            ELSE 0
-                        END
-                    ) AS excusas,
-
-                    ROUND(
-                        (
-                            SUM(
-                                CASE
-                                    WHEN a.Estado = 'Presente'
-                                    THEN 1
-                                    ELSE 0
-                                END
-                            ) / NULLIF(COUNT(a.Id_Asistencia), 0)
-                        ) * 100,
-                        2
-                    ) AS porcentaje
-
+                    SUM(CASE WHEN a.Estado = 'Presente' THEN 1 ELSE 0 END) AS presentes,
+                    SUM(CASE WHEN a.Estado = 'Falla' THEN 1 ELSE 0 END) AS fallas,
+                    SUM(CASE WHEN a.Estado = 'Retardo' THEN 1 ELSE 0 END) AS retardos,
+                    SUM(CASE WHEN a.Estado = 'Excusa' THEN 1 ELSE 0 END) AS excusas,
+                    ROUND((SUM(CASE WHEN a.Estado = 'Presente' THEN 1 ELSE 0 END) / NULLIF(COUNT(a.Id_Asistencia), 0)) * 100, 2) AS porcentaje
                 FROM usuario u
-
-                INNER JOIN usuario_ficha_asignacion ufa
-                    ON ufa.Id_Usuario = u.Id_Usuario
-
-                INNER JOIN ficha f
-                    ON f.ID_FICHA = ufa.ID_FICHA
-
-                LEFT JOIN asistencia a
-                    ON a.Id_Usuario = u.Id_Usuario
-                    AND a.Fecha_Requerida BETWEEN %s AND %s
-
-                WHERE u.ROL = 'Aprendiz'
-                  AND u.Activo_SN = '1'
-
+                INNER JOIN usuario_ficha_asignacion ufa ON ufa.Id_Usuario = u.Id_Usuario
+                INNER JOIN ficha f ON f.ID_FICHA = ufa.ID_FICHA
+                LEFT JOIN asistencia a ON a.Id_Usuario = u.Id_Usuario AND a.Fecha_Requerida BETWEEN %s AND %s
+                WHERE u.ROL = 'Aprendiz' AND u.Activo_SN = '1'
                   AND EXISTS (
-                      SELECT 1
-                      FROM usuario_ficha_asignacion ui
-                      WHERE ui.Id_Usuario = %s
-                        AND ui.ID_FICHA = ufa.ID_FICHA
+                      SELECT 1 FROM usuario_ficha_asignacion ui
+                      WHERE ui.Id_Usuario = %s AND ui.ID_FICHA = ufa.ID_FICHA
                   )
             """
-
-            params = [
-                fecha_inicio,
-                fecha_fin,
-                id_instructor
-            ]
+            params = [fecha_inicio, fecha_fin, id_instructor]
 
             if id_ficha:
-                sql += """
-                    AND f.ID_FICHA = %s
-                """
+                sql += " AND f.ID_FICHA = %s"
                 params.append(id_ficha)
 
-            sql += """
-                GROUP BY
-                    u.Id_Usuario,
-                    u.Nombre,
-                    u.Apellidos,
-                    f.ID_FICHA,
-                    f.No_FICHA
-
-                ORDER BY
-                    f.No_FICHA,
-                    u.Nombre
-            """
+            sql += " GROUP BY u.Id_Usuario, u.Nombre, u.Apellidos, f.ID_FICHA, f.No_FICHA ORDER BY f.No_FICHA, u.Nombre"
 
             cur.execute(sql, tuple(params))
-
             return cur.fetchall()
-
     except Exception as e:
         print(f"[DB ERROR] {e}")
         return []
-
     finally:
         if conn:
             conn.close()
-            
-def obtener_progresion_instructor(
-    id_instructor,
-    fecha_inicio,
-    fecha_fin,
-    id_ficha=None
-):
-    """
-    Obtiene la evolución diaria de asistencia de las fichas
-    pertenecientes al instructor.
-    """
 
+
+def obtener_progresion_instructor(id_instructor, fecha_inicio, fecha_fin, id_ficha=None):
+    """Obtiene la evolución diaria de asistencia de las fichas del instructor."""
     conn = None
-
     try:
         conn = get_db()
-
         with conn.cursor() as cur:
-
             sql = """
-                SELECT
-                    a.Fecha_Requerida AS fecha,
-
-                    COUNT(a.Id_Asistencia) AS total,
-
-                    SUM(
-                        CASE
-                            WHEN a.Estado = 'Presente'
-                            THEN 1
-                            ELSE 0
-                        END
-                    ) AS presentes
-
+                SELECT a.Fecha_Requerida AS fecha, COUNT(a.Id_Asistencia) AS total,
+                       SUM(CASE WHEN a.Estado = 'Presente' THEN 1 ELSE 0 END) AS presentes
                 FROM asistencia a
-
-                INNER JOIN usuario u
-                    ON u.Id_Usuario = a.Id_Usuario
-
-                INNER JOIN usuario_ficha_asignacion ufa
-                    ON ufa.Id_Usuario = u.Id_Usuario
-
-                WHERE u.ROL = 'Aprendiz'
-                  AND u.Activo_SN = '1'
-
-                  AND a.Fecha_Requerida BETWEEN %s AND %s
-
+                INNER JOIN usuario u ON u.Id_Usuario = a.Id_Usuario
+                INNER JOIN usuario_ficha_asignacion ufa ON ufa.Id_Usuario = u.Id_Usuario
+                WHERE u.ROL = 'Aprendiz' AND u.Activo_SN = '1' AND a.Fecha_Requerida BETWEEN %s AND %s
                   AND EXISTS (
-                      SELECT 1
-                      FROM usuario_ficha_asignacion ui
-                      WHERE ui.Id_Usuario = %s
-                        AND ui.ID_FICHA = ufa.ID_FICHA
+                      SELECT 1 FROM usuario_ficha_asignacion ui
+                      WHERE ui.Id_Usuario = %s AND ui.ID_FICHA = ufa.ID_FICHA
                   )
             """
-
-            params = [
-                fecha_inicio,
-                fecha_fin,
-                id_instructor
-            ]
+            params = [fecha_inicio, fecha_fin, id_instructor]
 
             if id_ficha:
-                sql += """
-                    AND ufa.ID_FICHA = %s
-                """
+                sql += " AND ufa.ID_FICHA = %s"
                 params.append(id_ficha)
 
-            sql += """
-                GROUP BY a.Fecha_Requerida
-                ORDER BY a.Fecha_Requerida ASC
-            """
+            sql += " GROUP BY a.Fecha_Requerida ORDER BY a.Fecha_Requerida ASC"
 
             cur.execute(sql, tuple(params))
-
             filas = cur.fetchall()
 
             resultado = []
-
             for fila in filas:
-
                 total = int(fila["total"] or 0)
                 presentes = int(fila["presentes"] or 0)
-
-                porcentaje = (
-                    round((presentes / total) * 100, 2)
-                    if total > 0
-                    else 0
-                )
-
+                porcentaje = round((presentes / total) * 100, 2) if total > 0 else 0.0
                 resultado.append({
                     "fecha": str(fila["fecha"]),
                     "total": total,
                     "presentes": presentes,
                     "porcentaje": porcentaje
                 })
-
             return resultado
-
     except Exception as e:
         print(f"[DB ERROR] {e}")
         return []
-
     finally:
         if conn:
             conn.close()
@@ -647,7 +420,7 @@ def guardar_soporte_falla(id_usuario, fecha_requerida, ruta_archivo):
             conn.commit()
             if cur.rowcount == 0:
                 return {"ok": False, "message": "No se encontró una falta pendiente para esa fecha."}
-            return {"ok": True, "message": "Soporte cargado correctamente."}
+            return {"ok": True, "message": "Soporte cargado y vinculado correctamente."}
     except Exception as e:
         print(f"[DB ERROR] {e}")
         if conn:
@@ -782,7 +555,7 @@ def responder_solicitud_salida(id_permiso, id_instructor, nuevo_estado):
             conn.commit()
 
         if solicitud:
-            mensaje = f"Tu solicitud de salida de las {solicitud['Hora_Solicitada']} fue {nuevo_estado.lower()}."
+            mensaje = f"Tu solicitud de salida anticipada de las {solicitud['Hora_Solicitada']} fue {nuevo_estado.lower()}."
             crear_notificacion(solicitud['Id_Aprendiz'], mensaje, enlace='/aprendiz/permisos')
 
         return {"ok": True, "message": f"Solicitud {nuevo_estado.lower()} correctamente."}
@@ -1031,19 +804,20 @@ def obtener_circulares_recientes(limite=20):
 
 def crear_novedad(id_instructor, titulo, mensaje, id_ficha=None, tipo='Alerta'):
     """Registra una novedad enviada por un instructor a la coordinación."""
-    conn = get_db()
+    conn = None
     try:
+        conn = get_db()
         with conn.cursor() as cur:
             cur.execute("""
                 INSERT INTO novedad (Id_Instructor, Id_Ficha, Tipo, Titulo, Mensaje, Estado)
                 VALUES (%s, %s, %s, %s, %s, 'Pendiente')
             """, (id_instructor, id_ficha, tipo, titulo, mensaje))
             conn.commit()
-        return {'ok': True, 'message': 'Novedad enviada al coordinador correctamente.'}
+            return {'ok': True, 'message': 'Novedad enviada al coordinador correctamente.'}
     except Exception as e:
+        print(f"[ERROR NOVEDAD]: {e}")
         if conn:
             conn.rollback()
-        print(f"[ERROR NOVEDAD]: {e}")
         return {'ok': False, 'message': 'No se pudo enviar la novedad.'}
     finally:
         if conn:
@@ -1052,8 +826,9 @@ def crear_novedad(id_instructor, titulo, mensaje, id_ficha=None, tipo='Alerta'):
 
 def obtener_novedades_pendientes():
     """Obtiene las novedades reportadas pendientes de atención."""
-    conn = get_db()
+    conn = None
     try:
+        conn = get_db()
         with conn.cursor() as cur:
             cur.execute("""
                 SELECT n.Id_Novedad, n.Tipo, n.Titulo, n.Mensaje, n.Estado, n.Fecha_Creacion,
@@ -1067,7 +842,7 @@ def obtener_novedades_pendientes():
             """)
             return cur.fetchall()
     except Exception as e:
-        print(f"[DB ERROR]: {e}")
+        print(f"[ERROR NOVEDAD]: {e}")
         return []
     finally:
         if conn:
@@ -1076,8 +851,9 @@ def obtener_novedades_pendientes():
 
 def marcar_novedad_resuelta(id_novedad, id_coordinador):
     """Actualiza el estado de una novedad a Resuelto."""
-    conn = get_db()
+    conn = None
     try:
+        conn = get_db()
         with conn.cursor() as cur:
             cur.execute("""
                 UPDATE novedad
@@ -1089,13 +865,13 @@ def marcar_novedad_resuelta(id_novedad, id_coordinador):
             filas_afectadas = cur.rowcount
             conn.commit()
 
-        if filas_afectadas == 0:
-            return {'ok': False, 'message': 'La novedad ya fue resuelta o no existe.'}
-        return {'ok': True, 'message': 'Novedad marcada como resuelta.'}
+            if filas_afectadas == 0:
+                return {'ok': False, 'message': 'La novedad ya fue resuelta o no existe.'}
+            return {'ok': True, 'message': 'Novedad marcada como resuelta.'}
     except Exception as e:
+        print(f"[ERROR NOVEDAD]: {e}")
         if conn:
             conn.rollback()
-        print(f"[ERROR NOVEDAD]: {e}")
         return {'ok': False, 'message': 'No se pudo actualizar la novedad.'}
     finally:
         if conn:

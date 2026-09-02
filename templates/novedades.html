@@ -15,6 +15,57 @@
     </div>
 {% endif %}
 
+{% if session.rol == 'instructor' %}
+<div class="card" style="margin-top: 20px;">
+    <h3>Enviar Novedad al Coordinador</h3>
+    <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 20px;">
+        Repórtale al coordinador una excusa, alerta de inasistencia u otra situación que requiera su revisión.
+        Esta novedad solo la puede enviar un instructor.
+    </p>
+
+    <form method="POST" action="{{ url_for('instructor.novedades') }}" style="display: flex; flex-direction: column; gap: 15px;">
+        <input type="hidden" name="accion" value="novedad">
+
+        <div style="display: flex; gap: 15px; flex-wrap: wrap;">
+            <div style="flex: 1; min-width: 180px;">
+                <label style="display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 5px;">Tipo</label>
+                <select name="novedad_tipo"
+                        style="width: 100%; background: var(--bg-main); border: 1px solid var(--border-color); padding: 10px; border-radius: 6px; color: var(--text-white);">
+                    {% for t in tipos_novedad %}
+                    <option value="{{ t }}">{{ t }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div style="flex: 1; min-width: 180px;">
+                <label style="display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 5px;">Ficha (opcional)</label>
+                <select name="novedad_ficha"
+                        style="width: 100%; background: var(--bg-main); border: 1px solid var(--border-color); padding: 10px; border-radius: 6px; color: var(--text-white);">
+                    <option value="">-- General --</option>
+                    {% for f in fichas %}
+                    <option value="{{ f.ID_FICHA }}">{{ f.No_FICHA }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+
+        <div>
+            <label style="display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 5px;">Título</label>
+            <input type="text" name="novedad_titulo" required
+                   style="width: 100%; background: var(--bg-main); border: 1px solid var(--border-color); padding: 10px; border-radius: 6px; color: var(--text-white);">
+        </div>
+        <div>
+            <label style="display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 5px;">Mensaje</label>
+            <textarea name="novedad_mensaje" rows="4" required
+                      style="width: 100%; background: var(--bg-main); border: 1px solid var(--border-color); padding: 10px; border-radius: 6px; color: var(--text-white); resize: vertical;"></textarea>
+        </div>
+        <button type="submit"
+                style="background: var(--info); border: none; padding: 12px; border-radius: 6px; font-weight: bold; cursor: pointer; color: var(--bg-main); align-self: flex-start; padding-left: 24px; padding-right: 24px;">
+            Enviar Novedad
+        </button>
+    </form>
+</div>
+{% endif %}
+
 <div class="card" style="margin-top: 20px;">
     <h3>Publicar Nueva Circular</h3>
     <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 20px;">
@@ -22,6 +73,7 @@
     </p>
 
     <form method="POST" action="{{ url_for('instructor.novedades') }}" style="display: flex; flex-direction: column; gap: 15px;">
+        <input type="hidden" name="accion" value="circular">
         <div>
             <label style="display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 5px;">Título</label>
             <input type="text" name="titulo" required
@@ -75,40 +127,4 @@
         </tbody>
     </table>
 </div>
-<script>
-    document.querySelectorAll('.btn-accion-novedad').forEach(btn => {
-        btn.addEventListener('click', async () => {
-            const fila = btn.closest('tr');
-            const id = fila.dataset.id;
-            const textoOriginal = btn.textContent;
-
-            btn.disabled = true;
-            btn.textContent = 'Procesando...';
-
-            try {
-                const resp = await fetch(`/api/novedades/${id}/accion`, { method: 'POST' });
-                const data = await resp.json();
-
-                if (data.status === 'success') {
-                    btn.textContent = 'Resuelto';
-                    fila.dataset.estado = 'resuelto';
-                    actualizarContadorPendientes();
-                } else {
-                    btn.disabled = false;
-                    btn.textContent = textoOriginal;
-                    alert(data.message || 'No se pudo procesar la novedad.');
-                }
-            } catch (err) {
-                btn.disabled = false;
-                btn.textContent = textoOriginal;
-                alert('Error al conectar con el servidor.');
-            }
-        });
-    });
-
-    function actualizarContadorPendientes() {
-        const pendientes = document.querySelectorAll('tr[data-estado="pendiente"]').length;
-        document.getElementById('badgePendientes').textContent = `${pendientes} Pendientes`;
-    }
-</script>
 {% endblock %}
