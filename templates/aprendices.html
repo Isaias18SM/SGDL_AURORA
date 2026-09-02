@@ -167,8 +167,10 @@
                 <select name="ficha_masivo" class="form-input">
                     <option value="">— Usar la columna "ficha" del archivo —</option>
                     {% for f in fichas %}
-                        <option value="{{ f.No_FICHA }}">Ficha {{ f.No_FICHA }}</option>
-                    {% endfor %}
+            <option value="{{ f.numero_ficha }}">
+                Ficha {{ f.numero_ficha }}
+            </option>
+        {% endfor %}
                 </select>
             </div>
             <div class="form-group form-group-full">

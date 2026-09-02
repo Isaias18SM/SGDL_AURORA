@@ -39,6 +39,7 @@
                     </div>
                     <form method="POST" action="{{ url_for('coordinador.coordinador_desasignar_ficha') }}">
                         <input type="hidden" name="ficha_codigo" value="{{ f.codigo }}">
+                        <input type="hidden" name="instructor_id" value="{{ ins.id }}">
                         <button type="submit" class="btn-icon-danger" title="Quitar asignación">
                             <i class="ph ph-x"></i>
                         </button>
@@ -52,28 +53,28 @@
         </div>
 
         <details class="assign-panel">
-    <summary class="btn-outline-fichas" style="width:100%; justify-content:center;">
-        <i class="ph ph-plus-circle"></i> Asignar a ficha
-    </summary>
-    <div style="margin-top:12px;">
-        {% if fichas_libres %}
-        <form method="POST" action="{{ url_for('coordinador.coordinador_asignar_ficha') }}">
-            <input type="hidden" name="instructor_id" value="{{ ins.id }}">
-            <div style="display:flex; flex-direction:column; gap:6px; margin-bottom:10px; max-height:160px; overflow-y:auto;">
-                {% for f in fichas_libres %}
-                <label style="display:flex; align-items:center; gap:8px; font-size:0.85rem; font-weight:normal;">
-                    <input type="checkbox" name="ficha_codigo" value="{{ f.codigo }}">
-                    Ficha {{ f.codigo }} — {{ f.programa }}
-                </label>
-                {% endfor %}
+            <summary class="btn-outline-fichas" style="width:100%; justify-content:center;">
+                <i class="ph ph-plus-circle"></i> Asignar a ficha
+            </summary>
+            <div style="margin-top:12px;">
+                {% if fichas_libres %}
+                <form method="POST" action="{{ url_for('coordinador.coordinador_asignar_ficha') }}">
+                    <input type="hidden" name="instructor_id" value="{{ ins.id }}">
+                    <div style="display:flex; flex-direction:column; gap:6px; margin-bottom:10px; max-height:160px; overflow-y:auto;">
+                        {% for f in fichas_libres %}
+                        <label style="display:flex; align-items:center; gap:8px; font-size:0.85rem; font-weight:normal;">
+                            <input type="checkbox" name="ficha_codigo" value="{{ f.codigo }}">
+                            Ficha {{ f.codigo }} — {{ f.programa }}
+                        </label>
+                        {% endfor %}
+                    </div>
+                    <button type="submit" class="btn-primary-sm" style="width:100%;">Asignar seleccionadas</button>
+                </form>
+                {% else %}
+                <p style="font-size:0.85rem; color:var(--text-muted);">No hay fichas disponibles para asignar en este momento.</p>
+                {% endif %}
             </div>
-            <button type="submit" class="btn-primary-sm" style="width:100%;">Asignar seleccionadas</button>
-        </form>
-        {% else %}
-        <p style="font-size:0.85rem; color:var(--text-muted);">No hay fichas disponibles para asignar en este momento.</p>
-        {% endif %}
-    </div>
-</details>
+        </details>
     </div>
     {% else %}
     <p style="color:var(--text-muted);">No hay instructores registrados.</p>

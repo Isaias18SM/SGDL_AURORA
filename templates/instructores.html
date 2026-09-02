@@ -37,12 +37,13 @@
                         <strong>Ficha {{ f.codigo }}</strong>
                         <p>{{ f.programa }} &middot; {{ f.jornada }}</p>
                     </div>
-                    <form method="POST" action="{{ url_for('coordinador_desasignar_ficha') }}">
-                        <input type="hidden" name="ficha_codigo" value="{{ f.codigo }}">
-                        <button type="submit" class="btn-icon-danger" title="Quitar asignación">
-                            <i class="ph ph-x"></i>
-                        </button>
-                    </form>
+                 <form method="POST" action="{{ url_for('coordinador_desasignar_ficha') }}">
+    <input type="hidden" name="ficha_codigo" value="{{ f.codigo }}">
+    <input type="hidden" name="instructor_id" value="{{ ins.id }}">
+    <button type="submit" class="btn-icon-danger" title="Quitar asignación">
+        <i class="ph ph-x"></i>
+    </button>
+</form>
                 </div>
                 {% endfor %}
             </div>

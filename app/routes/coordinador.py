@@ -132,17 +132,12 @@ def reportes_coordinador():
                 """, (ins['id'],))
                 ins['fichas'] = cur.fetchall()
 
-            # 3. Fichas sin instructor asignado
+            # 3. Todas las fichas disponibles para asignar (con o sin instructor)
             cur.execute("""
                 SELECT f.No_FICHA as codigo, p.Nombre as programa
                 FROM ficha f
                 LEFT JOIN programa p ON p.Id_Programa = f.Id_Programa
-                WHERE f.ID_FICHA NOT IN (
-                    SELECT DISTINCT ufa.ID_FICHA 
-                    FROM usuario_ficha_asignacion ufa
-                    JOIN usuario u ON u.Id_Usuario = ufa.Id_Usuario
-                    WHERE u.ROL = 'Instructor'
-                )
+                ORDER BY f.No_FICHA
             """)
             fichas_libres = cur.fetchall()
     finally:
@@ -154,7 +149,6 @@ def reportes_coordinador():
         instructores=instructores,
         fichas_libres=fichas_libres
     )
-
 
 @coordinador.route('/coordinador/asignar-ficha', methods=['POST'])
 @solo_rol('coordinador')
@@ -228,25 +222,38 @@ def coordinador_asignar_ficha():
 @solo_rol('coordinador')
 def coordinador_desasignar_ficha():
     ficha_codigo = request.form.get('ficha_codigo')
+    instructor_id = request.form.get('instructor_id')
+    print("RECIBIDO -> ficha_codigo:", ficha_codigo, "| instructor_id:", instructor_id)  # <-- NUEVO
+
+    if not ficha_codigo or not instructor_id:
+        flash('Datos incompletos para desasignar.', 'error')
+        return redirect(url_for('coordinador.reportes_coordinador'))
 
     conn = get_db()
     try:
         with conn.cursor() as cur:
             cur.execute("SELECT ID_FICHA FROM ficha WHERE No_FICHA = %s LIMIT 1", (ficha_codigo,))
             ficha = cur.fetchone()
+            print("FICHA ENCONTRADA:", ficha)  # <-- NUEVO
+
             if ficha:
-                cur.execute("DELETE FROM usuario_ficha_asignacion WHERE ID_FICHA = %s", (ficha['ID_FICHA'],))
+                cur.execute(
+                    "DELETE FROM usuario_ficha_asignacion WHERE ID_FICHA = %s AND Id_Usuario = %s",
+                    (ficha['ID_FICHA'], instructor_id)
+                )
+                print("FILAS BORRADAS:", cur.rowcount)  # <-- NUEVO
                 conn.commit()
                 flash('Asignación removida.', 'success')
+            else:
+                flash('Ficha no encontrada.', 'error')
     except Exception as e:
         conn.rollback()
+        print("ERROR DESASIGNAR:", e)  # <-- NUEVO
         flash('Error al desasignar la ficha.', 'error')
     finally:
         conn.close()
 
     return redirect(url_for('coordinador.reportes_coordinador'))
-
-
 @coordinador.route('/novedades-coordinador')
 @solo_rol('coordinador')
 def novedades_coordinador():

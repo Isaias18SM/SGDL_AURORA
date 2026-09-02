@@ -51,7 +51,9 @@
                 <li class="nav-item {% if active_page == 'reportes' %}active{% endif %}">
                     <a href="{{ url_for('instructor.modulos') }}"><i class="ph ph-chart-bar"></i> Reportes</a>
                 </li>
-                
+                <li class="nav-item {% if active_page == 'permisos' %}active{% endif %}">
+    <a href="{{ url_for('instructor.permisos_instructor') }}"><i class="ph ph-check-circle"></i> Permisos</a>
+</li>
                 <li class="nav-item {% if active_page == 'novedades' %}active{% endif %}">
                     <a href="{{ url_for('instructor.novedades') }}"><i class="ph ph-bell"></i> Novedades</a>
                 </li>
