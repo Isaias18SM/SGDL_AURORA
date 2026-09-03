@@ -53,7 +53,6 @@
         </div>
 
         <details class="assign-panel">
-<<<<<<< HEAD
             <summary class="btn-outline-fichas" style="width:100%; justify-content:center;">
                 <i class="ph ph-plus-circle"></i> Asignar a ficha
             </summary>
@@ -76,30 +75,6 @@
                 {% endif %}
             </div>
         </details>
-=======
-    <summary class="assignment-toggle">
-        <i class="ph ph-plus-circle"></i> Asignar a ficha
-    </summary>
-    <div class="assignment-options">
-        {% if fichas_libres %}
-        <form method="POST" action="{{ url_for('coordinador.coordinador_asignar_ficha') }}">
-            <input type="hidden" name="instructor_id" value="{{ ins.id }}">
-            <div class="assignment-checklist">
-                {% for f in fichas_libres %}
-                <label class="assignment-check">
-                    <input type="checkbox" name="ficha_codigo" value="{{ f.codigo }}">
-                    Ficha {{ f.codigo }} — {{ f.programa }}
-                </label>
-                {% endfor %}
-            </div>
-            <button type="submit" class="btn-primary-sm">Asignar seleccionadas</button>
-        </form>
-        {% else %}
-        <p class="empty-state">No hay fichas disponibles para asignar en este momento.</p>
-        {% endif %}
-    </div>
-</details>
->>>>>>> 287921e (Modificacion de interfaces y estilos ademas de añadir nuevas funciones.)
     </div>
     {% else %}
     <p style="color:var(--text-muted);">No hay instructores registrados.</p>

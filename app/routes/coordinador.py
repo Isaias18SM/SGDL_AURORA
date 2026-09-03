@@ -140,11 +140,7 @@ def reportes_coordinador():
                 """, (ins['id'],))
                 ins['fichas'] = cur.fetchall()
 
-<<<<<<< HEAD
-            # 3. Todas las fichas disponibles para asignar (con o sin instructor)
-=======
             # 3. Todas las fichas pueden asignarse a más de un instructor.
->>>>>>> 287921e (Modificacion de interfaces y estilos ademas de añadir nuevas funciones.)
             cur.execute("""
                 SELECT f.No_FICHA as codigo, p.Nombre as programa
                 FROM ficha f
@@ -162,16 +158,12 @@ def reportes_coordinador():
         fichas_libres=fichas_libres
     )
 
-<<<<<<< HEAD
-=======
 
 @coordinador.route('/coordinador/instructores')
 @solo_rol('coordinador')
 def gestion_instructores():
     return redirect(url_for('coordinador.reportes_coordinador'))
 
-
->>>>>>> 287921e (Modificacion de interfaces y estilos ademas de añadir nuevas funciones.)
 @coordinador.route('/coordinador/asignar-ficha', methods=['POST'])
 @solo_rol('coordinador')
 def coordinador_asignar_ficha():
@@ -254,41 +246,27 @@ def coordinador_asignar_ficha():
 def coordinador_desasignar_ficha():
     ficha_codigo = request.form.get('ficha_codigo')
     instructor_id = request.form.get('instructor_id')
-<<<<<<< HEAD
-    print("RECIBIDO -> ficha_codigo:", ficha_codigo, "| instructor_id:", instructor_id)  # <-- NUEVO
 
     if not ficha_codigo or not instructor_id:
         flash('Datos incompletos para desasignar.', 'error')
         return redirect(url_for('coordinador.reportes_coordinador'))
-=======
->>>>>>> 287921e (Modificacion de interfaces y estilos ademas de añadir nuevas funciones.)
 
     conn = get_db()
     try:
         with conn.cursor() as cur:
             cur.execute("SELECT ID_FICHA FROM ficha WHERE No_FICHA = %s LIMIT 1", (ficha_codigo,))
             ficha = cur.fetchone()
-            print("FICHA ENCONTRADA:", ficha)  # <-- NUEVO
 
             if ficha:
                 cur.execute(
-<<<<<<< HEAD
-                    "DELETE FROM usuario_ficha_asignacion WHERE ID_FICHA = %s AND Id_Usuario = %s",
-                    (ficha['ID_FICHA'], instructor_id)
-                )
-                print("FILAS BORRADAS:", cur.rowcount)  # <-- NUEVO
-                conn.commit()
-                flash('Asignación removida.', 'success')
-            else:
-                flash('Ficha no encontrada.', 'error')
-=======
                     """DELETE FROM usuario_ficha_asignacion
                        WHERE ID_FICHA = %s AND Id_Usuario = %s""",
                     (ficha['ID_FICHA'], instructor_id)
                 )
                 conn.commit()
                 flash('Asignación removida para el instructor.', 'success')
->>>>>>> 287921e (Modificacion de interfaces y estilos ademas de añadir nuevas funciones.)
+            else:
+                flash('Ficha no encontrada.', 'error')
     except Exception as e:
         conn.rollback()
         print("ERROR DESASIGNAR:", e)  # <-- NUEVO
@@ -392,17 +370,11 @@ def registrar_usuario():
 
             cur.execute(
                 """INSERT INTO usuario
-<<<<<<< HEAD
-                (Nombre, Apellidos, No_Documento, TPI_DOCUMENTO, CORREO_SENA, CONTRASENA, ROL, Activo_SN)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)""",
-                (nombres, apellidos, num_doc, tipo_doc, correo, clave_encriptada, rol, '1')
-=======
                    (Nombre, Apellidos, No_Documento, TPI_DOCUMENTO, CORREO_SENA,
                     CONTRASENA, ROL, Activo_SN, Token_QR)
                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)""",
                 (nombres, apellidos, num_doc, tipo_doc, correo,
                  clave_encriptada, rol, '1', token_qr)
->>>>>>> 287921e (Modificacion de interfaces y estilos ademas de añadir nuevas funciones.)
             )
             nuevo_id = cur.lastrowid
 
